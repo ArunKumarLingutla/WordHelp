@@ -1,0 +1,11 @@
+C:\Users\arunk\source\repos\WordHelp\WordHelp\bin\Debug\WordHelp.exe.config
+C:\Users\arunk\source\repos\WordHelp\WordHelp\bin\Debug\WordHelp.exe
+C:\Users\arunk\source\repos\WordHelp\WordHelp\bin\Debug\WordHelp.pdb
+C:\Users\arunk\source\repos\WordHelp\WordHelp\bin\Debug\DocumentFormat.OpenXml.dll
+C:\Users\arunk\source\repos\WordHelp\WordHelp\bin\Debug\DocumentFormat.OpenXml.Framework.dll
+C:\Users\arunk\source\repos\WordHelp\WordHelp\obj\Debug\WordHelp.csproj.AssemblyReference.cache
+C:\Users\arunk\source\repos\WordHelp\WordHelp\obj\Debug\WordHelp.csproj.CoreCompileInputs.cache
+C:\Users\arunk\source\repos\WordHelp\WordHelp\obj\Debug\WordHelp.csproj.Up2Date
+C:\Users\arunk\source\repos\WordHelp\WordHelp\obj\Debug\WordHelp.exe
+C:\Users\arunk\source\repos\WordHelp\WordHelp\obj\Debug\WordHelp.pdb
+C:\Users\arunk\source\repos\WordHelp\WordHelp\obj\Debug\WordHelp.exe.config
