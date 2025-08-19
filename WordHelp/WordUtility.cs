@@ -1,4 +1,5 @@
 ﻿using DocumentFormat.OpenXml;
+using DocumentFormat.OpenXml.Drawing.Wordprocessing;
 using DocumentFormat.OpenXml.Packaging;
 using DocumentFormat.OpenXml.Wordprocessing;
 using System;
@@ -21,7 +22,7 @@ namespace WordHelp
         /// <param name="wordUtilityObj"></param>
         /// <param name="filePath"></param>
         /// <param name="isEditable"></param>
-        public static void OpenWordDocument(WordUtility wordUtilityObj,string filePath, bool isEditable = true)
+        public static void OpenWordDocument(WordUtility wordUtilityObj, string filePath, bool isEditable = true)
         {
             try
             {
@@ -35,74 +36,23 @@ namespace WordHelp
         }
 
         /// <summary>
-        /// Finds and replaces text in a WordprocessingDocument.
+        /// Replaces all occurrences of a given text in a Word document (.docx).
         /// </summary>
-        /// <param name="wordprocessingDocument"></param>
-        /// <param name="searchText"></param>
-        /// <param name="replacementText"></param>
-        public static void FindAndReplaceText(WordprocessingDocument wordprocessingDocument, string searchText, string replacementText)
+        /// <param name="filePath">Full path to the Word document</param>
+        /// <param name="searchText">The text to search for</param>
+        /// <param name="replaceText">The text to replace with</param>
+        public static void ReplaceText(WordprocessingDocument wordDoc, string searchText, string replaceText)
         {
-            //// Open the WordprocessingDocument for editing
-            //using (WordprocessingDocument wordprocessingDocument = WordprocessingDocument.Open(path, true))
-            //{
-                // Access the MainDocumentPart and make sure it is not null
-                var mainDocumentPart = wordprocessingDocument.MainDocumentPart;
+            var body = wordDoc.MainDocumentPart.Document.Body;
 
-                if (mainDocumentPart != null)
+            foreach (var text in body.Descendants<Text>())
+            {
+                if (text.Text.Contains(searchText))
                 {
-                    // Create a MemoryStream to store the updated MainDocumentPart
-                    using (MemoryStream memoryStream = new MemoryStream())
-                    {
-                        // Create an OpenXmlReader to read the main document part
-                        // and an OpenXmlWriter to write to the MemoryStream
-                        using (OpenXmlReader reader = OpenXmlPartReader.Create(mainDocumentPart))
-                        using (OpenXmlWriter writer = OpenXmlPartWriter.Create(memoryStream))
-                        {
-                            // Write the XML declaration with the version "1.0".
-                            writer.WriteStartDocument();
-
-                            // Read the elements from the MainDocumentPart
-                            while (reader.Read())
-                            {
-                                // Check if the element is of type Text
-                                if (reader.ElementType == typeof(Text))
-                                {
-                                    // If it is the start of an element write the start element and the updated text
-                                    if (reader.IsStartElement)
-                                    {
-                                        writer.WriteStartElement(reader);
-
-                                        string text = reader.GetText().Replace(searchText, replacementText);
-
-                                        writer.WriteString(text);
-
-                                    }
-                                    else
-                                    {
-                                        // Close the element
-                                        writer.WriteEndElement();
-                                    }
-                                }
-                                else
-                                // Write the other XML elements without editing
-                                {
-                                    if (reader.IsStartElement)
-                                    {
-                                        writer.WriteStartElement(reader);
-                                    }
-                                    else if (reader.IsEndElement)
-                                    {
-                                        writer.WriteEndElement();
-                                    }
-                                }
-                            }
-                        }
-                        // Set the MemoryStream's position to 0 and replace the MainDocumentPart
-                        memoryStream.Position = 0;
-                        mainDocumentPart.FeedData(memoryStream);
-                    }
+                    text.Text = text.Text.Replace(searchText, replaceText);
                 }
-            //}
+            }
+            wordDoc.MainDocumentPart.Document.Save();
         }
 
         public static void MergeDocuments(string[] documentsToMerge, string destinationFile)
@@ -110,16 +60,17 @@ namespace WordHelp
             try
             {
                 //Copy the first document as base doc
-                File.Copy(documentsToMerge[0], destinationFile);
+                //File.Copy(documentsToMerge[0], destinationFile);
+                CheckFileExistanceAndCreateIfNot(destinationFile);
 
                 using (WordprocessingDocument destinationDoc = WordprocessingDocument.Open(destinationFile, true))
                 {
                     var mainPart = destinationDoc.MainDocumentPart;
                     var body = mainPart.Document.Body;
 
-                    for (int i = 1; i < documentsToMerge.Length; i++)
+                    for (int i = 0; i < documentsToMerge.Length; i++)
                     {
-                        using(WordprocessingDocument srcDoc = WordprocessingDocument.Open(documentsToMerge[i], true))
+                        using (WordprocessingDocument srcDoc = WordprocessingDocument.Open(documentsToMerge[i], true))
                         {
                             var srcPart = srcDoc.MainDocumentPart;
 
@@ -128,16 +79,61 @@ namespace WordHelp
                             var imageMapping = CopyImageWithMapping(srcPart, mainPart);
 
                             CopyHeaderFooter(srcDoc, destinationDoc);
-
                             //clone and remap body content
                             foreach (var element in srcPart.Document.Body.Elements())
                             {
-                                var clonedElement = element.CloneNode(true);
-                                ReMapImageReferences(clonedElement, imageMapping);
-                                body.AppendChild(clonedElement);
+                                if (!(element is SectionProperties))
+                                {
+                                    var clonedElement = element.CloneNode(true);
+                                    ReMapImageReferences(clonedElement, imageMapping);
+                                    body.AppendChild(clonedElement);
+                                }
                             }
 
-                            body.AppendChild(new Paragraph(new Run(new Break()))); // Add a break between documents
+                            if (documentsToMerge[i].Contains("2"))
+                            {
+                                // Insert a section break
+                                Paragraph para = new Paragraph(
+                                    new Run(
+
+                                    )
+                                );
+
+                                // Define section properties
+                                SectionProperties sectProps = new SectionProperties(
+                                    new PageSize() { Width = 16838, Height = 11906, Orient = PageOrientationValues.Landscape }
+                                // Or swap width/height for landscape
+                                );
+
+                                // Attach section properties to paragraph
+                                para.Append(sectProps);
+
+                                // Add to body
+                                body.Append(para);
+                            }
+                            else
+                            {
+                                // Insert a section break
+                                Paragraph para = new Paragraph(
+                                    new Run(
+
+                                    )
+                                );
+
+                                // Define section properties
+                                SectionProperties sectProps = new SectionProperties(
+                                    new PageSize() { Width = 11906, Height = 16838, Orient = PageOrientationValues.Portrait }
+                                // Or swap width/height for landscape
+                                );
+
+                                // Attach section properties to paragraph
+                                para.Append(sectProps);
+
+                                // Add to body
+                                body.Append(para);
+                            }
+
+                            //body.AppendChild(new Paragraph(new Run(new Break()))); // Add a break between documents
                         }
                     }
                     // Save changes to the destination document
@@ -149,7 +145,20 @@ namespace WordHelp
                 throw ex;
             }
         }
+        public static void CheckFileExistanceAndCreateIfNot(string filePath)
+        {
+            if (!File.Exists(filePath))
+            {
+                using (WordprocessingDocument wordDoc = WordprocessingDocument.Create(filePath, WordprocessingDocumentType.Document))
+                {
+                    // Add the main document part
+                    MainDocumentPart mainPart = wordDoc.AddMainDocumentPart();
 
+                    // Create the minimal document structure
+                    mainPart.Document = new Document(new Body());
+                }
+            }
+        }
         public static void CopyStyles(MainDocumentPart sourcePart, MainDocumentPart destinationPart)
         {
             try
@@ -161,13 +170,23 @@ namespace WordHelp
                     {
                         destinationPart.AddNewPart<StyleDefinitionsPart>();
                     }
-                    // Copy styles from source to destination
-                    using (var stream = new MemoryStream())
+
+                    //copy all styles from source to destination if not present already
+                    foreach (var style in sourcePart.StyleDefinitionsPart.Styles.Elements<Style>())
                     {
-                        sourcePart.StyleDefinitionsPart.GetStream().CopyTo(stream);
-                        stream.Position = 0;
-                        destinationPart.StyleDefinitionsPart.FeedData(stream);
+                        if (!destinationPart.StyleDefinitionsPart.Styles.Elements<Style>().Any(s => s.StyleId == style.StyleId))
+                        {
+                            destinationPart.StyleDefinitionsPart.Styles.Append(style.CloneNode(true));
+                        }
                     }
+
+                    //// Copy styles from source to destination, will replace all styles in previous doc
+                    //using (var stream = new MemoryStream())
+                    //{
+                    //    sourcePart.StyleDefinitionsPart.GetStream().CopyTo(stream);
+                    //    stream.Position = 0;
+                    //    destinationPart.StyleDefinitionsPart.FeedData(stream);
+                    //}
                 }
             }
             catch (Exception ex)
@@ -176,7 +195,7 @@ namespace WordHelp
             }
         }
 
-        public static Dictionary<string, string> CopyImageWithMapping(MainDocumentPart sourcePart,MainDocumentPart desttinationPart)
+        public static Dictionary<string, string> CopyImageWithMapping(MainDocumentPart sourcePart, MainDocumentPart desttinationPart)
         {
             var imageMapping = new Dictionary<string, string>();
             try
@@ -211,7 +230,7 @@ namespace WordHelp
                         var oldRelId = blip.Embed.Value;
                         if (imageMapping.ContainsKey(oldRelId))
                         {
-                            blip.Embed = imageMapping[blip.Embed]; 
+                            blip.Embed = imageMapping[blip.Embed];
                         }
                     }
                 }
@@ -235,7 +254,7 @@ namespace WordHelp
                     newHeaderPart.FeedData(sourceHeaderPart.GetStream());
                 }
 
-                foreach(var sourceFooterPart in sourceFooterParts)
+                foreach (var sourceFooterPart in sourceFooterParts)
                 {
                     var newFooterPart = destinationPart.MainDocumentPart.AddNewPart<FooterPart>();
                     newFooterPart.FeedData(sourceFooterPart.GetStream());
@@ -247,103 +266,164 @@ namespace WordHelp
                 throw ex;
             }
         }
-        public static void InsertAPicture(string document, string fileName)
+
+
+        public static void InsertSectionBreak(Body body, bool isLandscape)
         {
-            using (WordprocessingDocument wordprocessingDocument = WordprocessingDocument.Open(document, true))
-            {
-                if (wordprocessingDocument.MainDocumentPart is null)
+            var sectionProps = new SectionProperties(
+                new PageSize
                 {
-                    throw new ArgumentNullException("MainDocumentPart is null.");
-                }
-
-                MainDocumentPart mainPart = wordprocessingDocument.MainDocumentPart;
-
-                ImagePart imagePart = mainPart.AddImagePart(ImagePartType.Jpeg);
-
-                using (FileStream stream = new FileStream(fileName, FileMode.Open))
+                    Width = isLandscape ? (UInt32Value)16838U : (UInt32Value)11906U,
+                    Height = isLandscape ? (UInt32Value)11906U : (UInt32Value)16838U,
+                    Orient = isLandscape ? PageOrientationValues.Landscape : PageOrientationValues.Portrait
+                },
+                new PageMargin
                 {
-                    imagePart.FeedData(stream);
+                    Top = 1440,
+                    Right = 1440,
+                    Bottom = 1440,
+                    Left = 1440
                 }
+            );
 
-                AddImageToBody(wordprocessingDocument, mainPart.GetIdOfPart(imagePart));
-            }
+            // Create an empty paragraph with section properties
+            var p = new Paragraph(new ParagraphProperties(sectionProps));
+
+            // Append this paragraph — the section break happens here
+            body.Append(p);
         }
 
-        public static void AddImageToBody(WordprocessingDocument wordDoc, string relationshipId)
-        {
-            // Define the reference of the image.
-            var element =
-                 new Drawing(
-                     new DW.Inline(
-                         new DW.Extent() { Cx = 990000L, Cy = 792000L },
-                         new DW.EffectExtent()
-                         {
-                             LeftEdge = 0L,
-                             TopEdge = 0L,
-                             RightEdge = 0L,
-                             BottomEdge = 0L
-                         },
-                         new DW.DocProperties()
-                         {
-                             Id = (UInt32Value)1U,
-                             Name = "Picture 1"
-                         },
-                         new DW.NonVisualGraphicFrameDrawingProperties(
-                             new A.GraphicFrameLocks() { NoChangeAspect = true }),
-                         new A.Graphic(
-                             new A.GraphicData(
-                                 new PIC.Picture(
-                                     new PIC.NonVisualPictureProperties(
-                                         new PIC.NonVisualDrawingProperties()
-                                         {
-                                             Id = (UInt32Value)0U,
-                                             Name = "New Bitmap Image.jpg"
-                                         },
-                                         new PIC.NonVisualPictureDrawingProperties()),
-                                     new PIC.BlipFill(
-                                         new A.Blip(
-                                             new A.BlipExtensionList(
-                                                 new A.BlipExtension()
-                                                 {
-                                                     Uri =
-                                                        "{28A0092B-C50C-407E-A947-70E740481C1C}"
-                                                 })
-                                         )
-                                         {
-                                             Embed = relationshipId,
-                                             CompressionState =
-                                             A.BlipCompressionValues.Print
-                                         },
-                                         new A.Stretch(
-                                             new A.FillRectangle())),
-                                     new PIC.ShapeProperties(
-                                         new A.Transform2D(
-                                             new A.Offset() { X = 0L, Y = 0L },
-                                             new A.Extents() { Cx = 990000L, Cy = 792000L }),
-                                         new A.PresetGeometry(
-                                             new A.AdjustValueList()
-                                         )
-                                         { Preset = A.ShapeTypeValues.Rectangle }))
-                             )
-                             { Uri = "http://schemas.openxmlformats.org/drawingml/2006/picture" })
-                     )
-                     {
-                         DistanceFromTop = (UInt32Value)0U,
-                         DistanceFromBottom = (UInt32Value)0U,
-                         DistanceFromLeft = (UInt32Value)0U,
-                         DistanceFromRight = (UInt32Value)0U,
-                         EditId = "50D07946"
-                     });
 
-            if (wordDoc.MainDocumentPart is null || wordDoc.MainDocumentPart.Document.Body is null)
+        //public static void InsertDocumentWithLayout(MainDocumentPart mainPart, string filePath, bool isLandscape)
+        //{
+        //    if (mainPart?.Document?.Body == null)
+        //        throw new ArgumentNullException(nameof(mainPart));
+
+        //    // Section break before the inserted document
+        //    SectionProperties startSectProps = new SectionProperties(
+        //        new PageSize
+        //        {
+        //            Width = isLandscape ? (UInt32Value)16838U : (UInt32Value)11906U,
+        //            Height = isLandscape ? (UInt32Value)11906U : (UInt32Value)16838U,
+        //            Orient = isLandscape ? PageOrientationValues.Landscape : PageOrientationValues.Portrait
+        //        },
+        //        new PageMargin { Top = 720, Right = 720, Bottom = 720, Left = 720 }
+        //    );
+
+        //    mainPart.Document.Body.Append(
+        //        new Paragraph(new Run(new Break() { Type = BreakValues.Page })),
+        //        new Paragraph(new Run()) { ParagraphProperties = new ParagraphProperties(startSectProps.CloneNode(true) as SectionProperties) }
+        //    );
+
+        //    // Section break to return to portrait layout
+        //    SectionProperties endSectProps = new SectionProperties(
+        //        new PageSize
+        //        {
+        //            Width = 11906U,
+        //            Height = 16838U,
+        //            Orient = PageOrientationValues.Portrait
+        //        },
+        //        new PageMargin { Top = 720, Right = 720, Bottom = 720, Left = 720 }
+        //    );
+
+        //    mainPart.Document.Body.Append(
+        //        new Paragraph(new Run(new Break() { Type = BreakValues.Page })),
+        //        new Paragraph(new Run()) { ParagraphProperties = new ParagraphProperties(endSectProps.CloneNode(true) as SectionProperties) }
+        //    );
+        //}
+
+        public static void InsertAPicture(WordprocessingDocument wordDoc, string fileName)
+        {
+            if (wordDoc.MainDocumentPart == null)
+                throw new ArgumentNullException("MainDocumentPart is null.");
+
+            MainDocumentPart mainPart = wordDoc.MainDocumentPart;
+
+            ImagePart imagePart = mainPart.AddImagePart(ImagePartType.Jpeg);
+
+            long widthEmu;
+            long heightEmu;
+
+            using (System.Drawing.Image img = System.Drawing.Image.FromFile(fileName))
             {
-                throw new ArgumentNullException("MainDocumentPart and/or Body is null.");
+                widthEmu = (long)(img.Width * 9525);  // px to EMUs
+                heightEmu = (long)(img.Height * 9525);
             }
 
-            // Append the reference to body, the element should be in a Run.
+            using (FileStream stream = new FileStream(fileName, FileMode.Open))
+            {
+                imagePart.FeedData(stream);
+            }
+
+            AddImageToBody(wordDoc, mainPart.GetIdOfPart(imagePart), widthEmu, heightEmu);
+        }
+
+        public static void AddImageToBody(WordprocessingDocument wordDoc, string relationshipId, long widthEmu, long heightEmu)
+        {
+            var element = new Drawing(
+                new DW.Inline(
+                    new DW.Extent() { Cx = widthEmu, Cy = heightEmu },
+                    new DW.EffectExtent() { LeftEdge = 0L, TopEdge = 0L, RightEdge = 0L, BottomEdge = 0L },
+                    new DW.DocProperties() { Id = (UInt32Value)1U, Name = "Picture 1" },
+                    new DW.NonVisualGraphicFrameDrawingProperties(new A.GraphicFrameLocks() { NoChangeAspect = true }),
+                    new A.Graphic(
+                        new A.GraphicData(
+                            new PIC.Picture(
+                                new PIC.NonVisualPictureProperties(
+                                    new PIC.NonVisualDrawingProperties() { Id = (UInt32Value)0U, Name = "Inserted Image" },
+                                    new PIC.NonVisualPictureDrawingProperties()
+                                ),
+                                new PIC.BlipFill(
+                                    new A.Blip() { Embed = relationshipId, CompressionState = A.BlipCompressionValues.Print },
+                                    new A.Stretch(new A.FillRectangle())
+                                ),
+                                new PIC.ShapeProperties(
+                                    new A.Transform2D(
+                                        new A.Offset() { X = 0L, Y = 0L },
+                                        new A.Extents() { Cx = widthEmu, Cy = heightEmu }
+                                    ),
+                                    new A.PresetGeometry(new A.AdjustValueList()) { Preset = A.ShapeTypeValues.Rectangle }
+                                )
+                            )
+                        )
+                        { Uri = "http://schemas.openxmlformats.org/drawingml/2006/picture" }
+                    )
+                )
+                { DistanceFromTop = 0U, DistanceFromBottom = 0U, DistanceFromLeft = 0U, DistanceFromRight = 0U }
+            );
+
             wordDoc.MainDocumentPart.Document.Body.AppendChild(new Paragraph(new Run(element)));
         }
 
+        public static void ReplaceImageByAltText(WordprocessingDocument wordDoc, string altText, string newImagePath)
+        {
+
+            var drawings = wordDoc.MainDocumentPart.Document.Body
+                .Descendants<Drawing>();
+
+            foreach (var drawing in drawings)
+            {
+                var docPr = drawing.Descendants<DocProperties>().FirstOrDefault();
+                if (docPr != null &&
+                    docPr.Description != null &&
+                    docPr.Description.Value.ToUpper().Contains(altText.ToUpper()))
+                {
+                    // Get the Blip element that references the image
+                    var blip = drawing.Descendants<A.Blip>().FirstOrDefault();
+                    if (blip != null)
+                    {
+                        var relId = blip.Embed.Value;
+                        var imagePart = (ImagePart)wordDoc.MainDocumentPart.GetPartById(relId);
+
+                        using (FileStream newImageStream = new FileStream(newImagePath, FileMode.Open))
+                        {
+                            imagePart.FeedData(newImageStream); // Replace image
+                        }
+                    }
+                }
+            }
+
+        }
         public static void SaveWordProcessDocument(WordprocessingDocument wordprocessingDocument)
         {
             try
