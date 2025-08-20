@@ -1,5 +1,4 @@
 ﻿using DocumentFormat.OpenXml;
-using DocumentFormat.OpenXml.Drawing.Wordprocessing;
 using DocumentFormat.OpenXml.Packaging;
 using DocumentFormat.OpenXml.Wordprocessing;
 using System;
@@ -395,31 +394,18 @@ namespace WordHelp
             wordDoc.MainDocumentPart.Document.Body.AppendChild(new Paragraph(new Run(element)));
         }
 
-        public static void ReplaceImageByAltText(WordprocessingDocument wordDoc, string altText, string newImagePath)
+        public static void ReplaceImage(WordprocessingDocument wordDoc, string newImagePath)
         {
 
-            var drawings = wordDoc.MainDocumentPart.Document.Body
-                .Descendants<Drawing>();
+            // Get all ImageParts in the main document
+            var imageParts = wordDoc.MainDocumentPart.ImageParts;
 
-            foreach (var drawing in drawings)
+            foreach (ImagePart imagePart in imageParts)
             {
-                var docPr = drawing.Descendants<DocProperties>().FirstOrDefault();
-                if (docPr != null &&
-                    docPr.Description != null &&
-                    docPr.Description.Value.ToUpper().Contains(altText.ToUpper()))
+                using (FileStream newImageStream = new FileStream(newImagePath, FileMode.Open))
                 {
-                    // Get the Blip element that references the image
-                    var blip = drawing.Descendants<A.Blip>().FirstOrDefault();
-                    if (blip != null)
-                    {
-                        var relId = blip.Embed.Value;
-                        var imagePart = (ImagePart)wordDoc.MainDocumentPart.GetPartById(relId);
-
-                        using (FileStream newImageStream = new FileStream(newImagePath, FileMode.Open))
-                        {
-                            imagePart.FeedData(newImageStream); // Replace image
-                        }
-                    }
+                    // Replace the image data in the ImagePart
+                    imagePart.FeedData(newImageStream);
                 }
             }
 

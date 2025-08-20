@@ -23,7 +23,7 @@ namespace WordHelp
             WordUtility.OpenWordDocument(wordObj, filePath);
             WordUtility.ReplaceText(wordObj.wordDoc, "Hello", "Hi");
             WordUtility.InsertAPicture(wordObj.wordDoc, System.IO.Path.Combine(desktopPath, "Test.png"));
-            WordUtility.ReplaceImageByAltText(wordObj.wordDoc, "IMAGE2", System.IO.Path.Combine(desktopPath, "Test.png"));
+            WordUtility.ReplaceImage(wordObj.wordDoc,System.IO.Path.Combine(desktopPath, "Test.png"));
             WordUtility.SaveWordProcessDocument(wordObj.wordDoc);
             WordUtility.CloseWordProcessDocument(wordObj.wordDoc);
             //WordUtility.MergeDocuments(filesToMerge, destinationFilePath);
