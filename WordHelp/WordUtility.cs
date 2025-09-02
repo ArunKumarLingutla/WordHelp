@@ -14,7 +14,22 @@ namespace WordHelp
     public class WordUtility
     {
         public WordprocessingDocument wordDoc { get; set; }
+        public static void CreateWordprocessingDocument(string filepath)
+        {
+            // Create a document by supplying the filepath. 
+            using (WordprocessingDocument wordDocument = WordprocessingDocument.Create(filepath, WordprocessingDocumentType.Document))
+            {
+                // Add a main document part. 
+                MainDocumentPart mainPart = wordDocument.AddMainDocumentPart();
 
+                // Create the document structure and add some text.
+                mainPart.Document = new Document();
+                Body body = mainPart.Document.AppendChild(new Body());
+                Paragraph para = body.AppendChild(new Paragraph());
+                Run run = para.AppendChild(new Run());
+                run.AppendChild(new Text(""));
+            }
+        }
         /// <summary>
         /// Opens a WordprocessingDocument at the specified file path.
         /// </summary>
@@ -33,7 +48,6 @@ namespace WordHelp
                 throw ex;
             }
         }
-
         /// <summary>
         /// Replaces all occurrences of a given text in a Word document (.docx).
         /// </summary>
@@ -53,14 +67,15 @@ namespace WordHelp
             }
             wordDoc.MainDocumentPart.Document.Save();
         }
-
-        public static void MergeDocuments(string[] documentsToMerge, string destinationFile)
+        public static void MergeDocuments(string templateFile, string[] documentsToMerge, string destinationFile)
         {
             try
             {
                 //Copy the first document as base doc
                 //File.Copy(documentsToMerge[0], destinationFile);
-                CheckFileExistanceAndCreateIfNot(destinationFile);
+
+                // Start from the template
+                File.Copy(templateFile, destinationFile, true);
 
                 using (WordprocessingDocument destinationDoc = WordprocessingDocument.Open(destinationFile, true))
                 {
@@ -89,48 +104,47 @@ namespace WordHelp
                                 }
                             }
 
-                            if (documentsToMerge[i].Contains("2"))
-                            {
-                                // Insert a section break
-                                Paragraph para = new Paragraph(
-                                    new Run(
+                            //if (documentsToMerge[i].Contains("2"))
+                            //{
+                            //    // Insert a section break
+                            //    Paragraph para = new Paragraph(
+                            //        new Run(
 
-                                    )
-                                );
+                            //        )
+                            //    );
 
-                                // Define section properties
-                                SectionProperties sectProps = new SectionProperties(
-                                    new PageSize() { Width = 16838, Height = 11906, Orient = PageOrientationValues.Landscape }
-                                // Or swap width/height for landscape
-                                );
+                            //    // Define section properties
+                            //    SectionProperties sectProps = new SectionProperties(
+                            //        new PageSize() { Width = 16838, Height = 11906, Orient = PageOrientationValues.Landscape }
+                            //    // Or swap width/height for landscape
+                            //    );
 
-                                // Attach section properties to paragraph
-                                para.Append(sectProps);
+                            //    // Attach section properties to paragraph
+                            //    para.Append(sectProps);
 
-                                // Add to body
-                                body.Append(para);
-                            }
-                            else
-                            {
-                                // Insert a section break
-                                Paragraph para = new Paragraph(
-                                    new Run(
+                            //    // Add to body
+                            //    body.Append(para);
+                            //}
 
-                                    )
-                                );
+                            // Insert a section break
+                            Paragraph para = new Paragraph(
+                                new Run(
 
-                                // Define section properties
-                                SectionProperties sectProps = new SectionProperties(
-                                    new PageSize() { Width = 11906, Height = 16838, Orient = PageOrientationValues.Portrait }
-                                // Or swap width/height for landscape
-                                );
+                                )
+                            );
 
-                                // Attach section properties to paragraph
-                                para.Append(sectProps);
+                            // Define section properties
+                            SectionProperties sectProps = new SectionProperties(
+                                new PageSize() { Width = 11906, Height = 16838, Orient = PageOrientationValues.Portrait }
+                            // Or swap width/height for landscape
+                            );
 
-                                // Add to body
-                                body.Append(para);
-                            }
+                            // Attach section properties to paragraph
+                            para.Append(sectProps);
+
+                            // Add to body
+                            body.Append(para);
+
 
                             //body.AppendChild(new Paragraph(new Run(new Break()))); // Add a break between documents
                         }
@@ -142,20 +156,6 @@ namespace WordHelp
             catch (Exception ex)
             {
                 throw ex;
-            }
-        }
-        public static void CheckFileExistanceAndCreateIfNot(string filePath)
-        {
-            if (!File.Exists(filePath))
-            {
-                using (WordprocessingDocument wordDoc = WordprocessingDocument.Create(filePath, WordprocessingDocumentType.Document))
-                {
-                    // Add the main document part
-                    MainDocumentPart mainPart = wordDoc.AddMainDocumentPart();
-
-                    // Create the minimal document structure
-                    mainPart.Document = new Document(new Body());
-                }
             }
         }
         public static void CopyStyles(MainDocumentPart sourcePart, MainDocumentPart destinationPart)
@@ -264,32 +264,6 @@ namespace WordHelp
             {
                 throw ex;
             }
-        }
-
-
-        public static void InsertSectionBreak(Body body, bool isLandscape)
-        {
-            var sectionProps = new SectionProperties(
-                new PageSize
-                {
-                    Width = isLandscape ? (UInt32Value)16838U : (UInt32Value)11906U,
-                    Height = isLandscape ? (UInt32Value)11906U : (UInt32Value)16838U,
-                    Orient = isLandscape ? PageOrientationValues.Landscape : PageOrientationValues.Portrait
-                },
-                new PageMargin
-                {
-                    Top = 1440,
-                    Right = 1440,
-                    Bottom = 1440,
-                    Left = 1440
-                }
-            );
-
-            // Create an empty paragraph with section properties
-            var p = new Paragraph(new ParagraphProperties(sectionProps));
-
-            // Append this paragraph — the section break happens here
-            body.Append(p);
         }
 
 

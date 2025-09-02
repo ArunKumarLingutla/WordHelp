@@ -18,14 +18,16 @@ namespace WordHelp
                 System.IO.Path.Combine(desktopPath, "Merge1.docx"),
                 System.IO.Path.Combine(desktopPath, "Merge2.docx"),
             };
-            var destinationFilePath = System.IO.Path.Combine(desktopPath, "FinalMerge.docx");
+            var destinationFilePath = System.IO.Path.Combine(desktopPath, "Final Merge.docx");
+            var templateFilePath = System.IO.Path.Combine(desktopPath, "templateFile.docx");
 
             WordUtility.OpenWordDocument(wordObj, filePath);
-            WordUtility.ReplaceText(wordObj.wordDoc, "Hello", "Hi");
-            WordUtility.InsertAPicture(wordObj.wordDoc, System.IO.Path.Combine(desktopPath, "Test.png"));
+            WordUtility.ReplaceText(wordObj.wordDoc, "Hi", "Hello");
             WordUtility.ReplaceImage(wordObj.wordDoc,System.IO.Path.Combine(desktopPath, "Test.png"));
+            WordUtility.InsertAPicture(wordObj.wordDoc, System.IO.Path.Combine(desktopPath, "Test.png"));
             WordUtility.SaveWordProcessDocument(wordObj.wordDoc);
             WordUtility.CloseWordProcessDocument(wordObj.wordDoc);
+            WordUtility.MergeDocuments(templateFilePath,filesToMerge, destinationFilePath);
             //WordUtility.MergeDocuments(filesToMerge, destinationFilePath);
         }
     }
