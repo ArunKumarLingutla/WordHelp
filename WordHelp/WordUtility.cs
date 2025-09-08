@@ -384,6 +384,32 @@ namespace WordHelp
             }
 
         }
+
+        public static void ConvertNcToWord(string ncFilePath, string docxFilePath)
+        {
+            // Read all lines from the .nc file
+            string[] ncLines = File.ReadAllLines(ncFilePath);
+
+            // Create Word document
+            using (WordprocessingDocument wordDoc =
+                WordprocessingDocument.Create(docxFilePath, WordprocessingDocumentType.Document))
+            {
+                // Add main document part
+                MainDocumentPart mainPart = wordDoc.AddMainDocumentPart();
+                mainPart.Document = new Document();
+                Body body = new Body();
+
+                // Add each line as a paragraph
+                foreach (string line in ncLines)
+                {
+                    Paragraph para = new Paragraph(new Run(new Text(line)));
+                    body.AppendChild(para);
+                }
+
+                mainPart.Document.Append(body);
+                mainPart.Document.Save();
+            }
+        }
         public static void SaveWordProcessDocument(WordprocessingDocument wordprocessingDocument)
         {
             try
