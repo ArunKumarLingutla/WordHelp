@@ -29,11 +29,12 @@ namespace WordHelp
             //WordUtility.InsertAPicture(wordObj.wordDoc, System.IO.Path.Combine(desktopPath, "Test.png"));
             //WordUtility.SaveWordProcessDocument(wordObj.wordDoc);
             //WordUtility.CloseWordProcessDocument(wordObj.wordDoc);
-            //WordUtility.MergeDocuments(templateFilePath,filesToMerge, destinationFilePath);
+            WordUtility.MergeDocuments(templateFilePath,filesToMerge, destinationFilePath);
             ////WordUtility.MergeDocuments(filesToMerge, destinationFilePath);
-            ///
+            
+            DocxConverter.ConvertToHtml(destinationFilePath, System.IO.Path.Combine(desktopPath, "Final Merge.html"));
 
-            WordUtility.ConvertNcToWord(dummyTextFile,nctoword);
+            //WordUtility.ConvertNcToWord(dummyTextFile,nctoword);
         }
     }
 }

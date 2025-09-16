@@ -40,6 +40,18 @@
             "related": ".xml"
           }
         }
+      },
+      "Open-Xml-PowerTools/4.4.0": {
+        "type": "package",
+        "dependencies": {
+          "DocumentFormat.OpenXml": "2.8.1"
+        },
+        "compile": {
+          "lib/net46/OpenXmlPowerTools.dll": {}
+        },
+        "runtime": {
+          "lib/net46/OpenXmlPowerTools.dll": {}
+        }
       }
     },
     ".NETFramework,Version=v4.8/win": {
@@ -80,6 +92,18 @@
           "lib/net46/DocumentFormat.OpenXml.Framework.dll": {
             "related": ".xml"
           }
+        }
+      },
+      "Open-Xml-PowerTools/4.4.0": {
+        "type": "package",
+        "dependencies": {
+          "DocumentFormat.OpenXml": "2.8.1"
+        },
+        "compile": {
+          "lib/net46/OpenXmlPowerTools.dll": {}
+        },
+        "runtime": {
+          "lib/net46/OpenXmlPowerTools.dll": {}
         }
       }
     },
@@ -122,6 +146,18 @@
             "related": ".xml"
           }
         }
+      },
+      "Open-Xml-PowerTools/4.4.0": {
+        "type": "package",
+        "dependencies": {
+          "DocumentFormat.OpenXml": "2.8.1"
+        },
+        "compile": {
+          "lib/net46/OpenXmlPowerTools.dll": {}
+        },
+        "runtime": {
+          "lib/net46/OpenXmlPowerTools.dll": {}
+        }
       }
     },
     ".NETFramework,Version=v4.8/win-x64": {
@@ -163,6 +199,18 @@
             "related": ".xml"
           }
         }
+      },
+      "Open-Xml-PowerTools/4.4.0": {
+        "type": "package",
+        "dependencies": {
+          "DocumentFormat.OpenXml": "2.8.1"
+        },
+        "compile": {
+          "lib/net46/OpenXmlPowerTools.dll": {}
+        },
+        "runtime": {
+          "lib/net46/OpenXmlPowerTools.dll": {}
+        }
       }
     },
     ".NETFramework,Version=v4.8/win-x86": {
@@ -203,6 +251,18 @@
           "lib/net46/DocumentFormat.OpenXml.Framework.dll": {
             "related": ".xml"
           }
+        }
+      },
+      "Open-Xml-PowerTools/4.4.0": {
+        "type": "package",
+        "dependencies": {
+          "DocumentFormat.OpenXml": "2.8.1"
+        },
+        "compile": {
+          "lib/net46/OpenXmlPowerTools.dll": {}
+        },
+        "runtime": {
+          "lib/net46/OpenXmlPowerTools.dll": {}
         }
       }
     }
@@ -255,12 +315,27 @@
         "lib/netstandard2.0/DocumentFormat.OpenXml.Framework.dll",
         "lib/netstandard2.0/DocumentFormat.OpenXml.Framework.xml"
       ]
+    },
+    "Open-Xml-PowerTools/4.4.0": {
+      "sha512": "zdxzqgaByTx4UJpxA+SfLW4YpZwDkmPy9Vw2r+Y3RQQh0roRDyygvcalZR5C66kiRhpkbGV2azYKUNw6xVotpg==",
+      "type": "package",
+      "path": "open-xml-powertools/4.4.0",
+      "files": [
+        ".nupkg.metadata",
+        ".signature.p7s",
+        "lib/net45/OpenXmlPowerTools.dll",
+        "lib/net46/OpenXmlPowerTools.dll",
+        "lib/netstandard2.0/OpenXmlPowerTools.dll",
+        "open-xml-powertools.4.4.0.nupkg.sha512",
+        "open-xml-powertools.nuspec"
+      ]
     }
   },
   "projectFileDependencyGroups": {
     ".NETFramework,Version=v4.8": [
       "DocumentFormat.OpenXml >= 3.3.0",
-      "DocumentFormat.OpenXml.Framework >= 3.3.0"
+      "DocumentFormat.OpenXml.Framework >= 3.3.0",
+      "Open-Xml-PowerTools >= 4.4.0"
     ]
   },
   "packageFolders": {
@@ -314,6 +389,10 @@
           "DocumentFormat.OpenXml.Framework": {
             "target": "Package",
             "version": "[3.3.0, )"
+          },
+          "Open-Xml-PowerTools": {
+            "target": "Package",
+            "version": "[4.4.0, )"
           }
         }
       }

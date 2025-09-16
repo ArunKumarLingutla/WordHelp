@@ -51,6 +51,10 @@
             "DocumentFormat.OpenXml.Framework": {
               "target": "Package",
               "version": "[3.3.0, )"
+            },
+            "Open-Xml-PowerTools": {
+              "target": "Package",
+              "version": "[4.4.0, )"
             }
           }
         }

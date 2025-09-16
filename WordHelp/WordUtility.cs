@@ -1,10 +1,12 @@
 ﻿using DocumentFormat.OpenXml;
 using DocumentFormat.OpenXml.Packaging;
 using DocumentFormat.OpenXml.Wordprocessing;
+using OpenXmlPowerTools;
 using System;
 using System.Collections.Generic;
 using System.IO;
 using System.Linq;
+using System.Xml.Linq;
 using A = DocumentFormat.OpenXml.Drawing;
 using DW = DocumentFormat.OpenXml.Drawing.Wordprocessing;
 using PIC = DocumentFormat.OpenXml.Drawing.Pictures;
@@ -410,6 +412,62 @@ namespace WordHelp
                 mainPart.Document.Save();
             }
         }
+
+
+
+
+        public static void ConvertToHTML(string strFilePath,string strOutputDirectory)
+        {
+            // Setup variables and file paths
+            //string strFilePath = "Path to your .docx file"; // Replace with your file path
+            //string strOutputDirectory = "OutputPath"; // Replace with your output path
+
+            Directory.CreateDirectory(strOutputDirectory);
+
+            WordprocessingDocument wdDoc = WordprocessingDocument.Open(strFilePath, true);
+
+            // Set image directory and HTML settings
+            string strImageDirectoryName = Path.Combine(strOutputDirectory, "_files");
+            Directory.CreateDirectory(strImageDirectoryName);
+
+            // Replace this block in ConvertToHTML method:
+            HtmlConverterSettings settings = new HtmlConverterSettings()
+            {
+                ImageHandler = imageInfo =>
+                {
+                    // Get image bytes from Bitmap
+                    byte[] imageBytes;
+                    using (var ms = new MemoryStream())
+                    {
+                        imageInfo.Bitmap.Save(ms, imageInfo.Bitmap.RawFormat);
+                        imageBytes = ms.ToArray();
+                    }
+
+                    string base64 = Convert.ToBase64String(imageBytes);
+
+                    // Detect MIME type from extension
+                    string mimeType = imageInfo.ContentType; // example: "image/png", "image/jpeg"
+
+                    return new XElement(Xhtml.img,
+                        new XAttribute(NoNamespace.src, $"data:{mimeType};base64,{base64}"),
+                        imageInfo.ImgStyleAttribute,
+                        imageInfo.AltText != null ? new XAttribute(NoNamespace.alt, imageInfo.AltText) : null
+                    );
+                }
+            };
+
+            // Convert the document to HTML
+            XElement htmlElement = HtmlConverter.ConvertToHtml(wdDoc, settings);
+            wdDoc.Dispose();
+
+            // Write to HTML file
+            File.WriteAllText(Path.Combine(strOutputDirectory, "output.html"), htmlElement.ToString(), System.Text.Encoding.UTF8);
+
+            Console.WriteLine("Conversion complete.");
+        }
+
+
+
         public static void SaveWordProcessDocument(WordprocessingDocument wordprocessingDocument)
         {
             try
