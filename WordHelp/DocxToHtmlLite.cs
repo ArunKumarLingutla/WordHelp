@@ -112,8 +112,17 @@ namespace WordHelp
 
                                 return new XElement("td",
                                     new XAttribute("style", style),
+                                    // colspan for merged columns
+                                    (tc.TableCellProperties?.GridSpan != null) ?
+                                        new XAttribute("colspan", tc.TableCellProperties.GridSpan.Val) : null,
+                                    // rowspan for merged rows
+                                    (tc.TableCellProperties?.VerticalMerge != null &&
+                                    tc.TableCellProperties.VerticalMerge.Val != null &&
+                                    tc.TableCellProperties.VerticalMerge.Val != Word.MergedCellValues.Restart) ?
+                                        new XAttribute("rowspan", "???") : null, // need logic to calculate rowspan count
                                     tc.Elements().Select(e => ConvertElement(e, doc)).Where(e => e != null)
                                 );
+
                             })
                         )
                     )
