@@ -73,10 +73,7 @@ namespace WordHelp
         {
             try
             {
-                //Copy the first document as base doc
-                //File.Copy(documentsToMerge[0], destinationFile);
-
-                // Start from the template
+                // Start from template
                 File.Copy(templateFile, destinationFile, true);
 
                 using (WordprocessingDocument destinationDoc = WordprocessingDocument.Open(destinationFile, true))
@@ -90,76 +87,53 @@ namespace WordHelp
                         {
                             var srcPart = srcDoc.MainDocumentPart;
 
+                            // Copy styles and images
                             CopyStyles(srcPart, mainPart);
-
                             var imageMapping = CopyImageWithMapping(srcPart, mainPart);
 
+                            // Copy headers and footers
                             CopyHeaderFooter(srcDoc, destinationDoc);
-                            //clone and remap body content
-                            foreach (var element in srcPart.Document.Body.Elements())
+
+                            // Ensure each document starts on new page (except first one)
+                            if (i > 0)
                             {
-                                if (!(element is SectionProperties))
-                                {
-                                    var clonedElement = element.CloneNode(true);
-                                    ReMapImageReferences(clonedElement, imageMapping);
-                                    body.AppendChild(clonedElement);
-                                }
+                                body.AppendChild(new Paragraph(new Run(new Break() { Type = BreakValues.Page })));
                             }
 
-                            //if (documentsToMerge[i].Contains("2"))
-                            //{
-                            //    // Insert a section break
-                            //    Paragraph para = new Paragraph(
-                            //        new Run(
+                            // Get usable page width for images
+                            int maxWidthEMU = GetUsablePageWidth(mainPart);
 
-                            //        )
-                            //    );
+                            // Clone and import elements
+                            foreach (var element in srcPart.Document.Body.Elements())
+                            {
+                                if (element is SectionProperties) continue;
 
-                            //    // Define section properties
-                            //    SectionProperties sectProps = new SectionProperties(
-                            //        new PageSize() { Width = 16838, Height = 11906, Orient = PageOrientationValues.Landscape }
-                            //    // Or swap width/height for landscape
-                            //    );
+                                var clonedElement = (OpenXmlElement)element.CloneNode(true);
 
-                            //    // Attach section properties to paragraph
-                            //    para.Append(sectProps);
+                                // Detach to avoid "part of a tree" error
+                                clonedElement = clonedElement.CloneNode(true);
 
-                            //    // Add to body
-                            //    body.Append(para);
-                            //}
+                                // Remap image IDs
+                                ReMapImageReferences(clonedElement, imageMapping);
 
-                            // Insert a section break
-                            Paragraph para = new Paragraph(
-                                new Run(
+                                // Fix image sizes
+                                FixImageSizes(clonedElement, maxWidthEMU);
 
-                                )
-                            );
-
-                            // Define section properties
-                            SectionProperties sectProps = new SectionProperties(
-                                new PageSize() { Width = 11906, Height = 16838, Orient = PageOrientationValues.Portrait }
-                            // Or swap width/height for landscape
-                            );
-
-                            // Attach section properties to paragraph
-                            para.Append(sectProps);
-
-                            // Add to body
-                            body.Append(para);
-
-
-                            //body.AppendChild(new Paragraph(new Run(new Break()))); // Add a break between documents
+                                body.AppendChild(clonedElement);
+                            }
                         }
                     }
-                    // Save changes to the destination document
+
+                    // Save merged result
                     destinationDoc.MainDocumentPart.Document.Save();
                 }
             }
             catch (Exception ex)
             {
-                throw ex;
+                throw new Exception("Error merging documents", ex);
             }
         }
+
         public static void CopyStyles(MainDocumentPart sourcePart, MainDocumentPart destinationPart)
         {
             try
@@ -385,6 +359,31 @@ namespace WordHelp
                 }
             }
 
+        }
+        public static int GetUsablePageWidth(MainDocumentPart mainPart)
+        {
+            var sectProps = mainPart.Document.Body.Descendants<SectionProperties>().LastOrDefault();
+            var pageSize = sectProps?.GetFirstChild<PageSize>();
+            var pageMargin = sectProps?.GetFirstChild<PageMargin>();
+
+            var pageWidthTwips = pageSize?.Width ?? 11906;   // default A4 portrait width in twips
+            var leftMarginTwips = pageMargin?.Left ?? 1440;  // default 1 inch
+            var rightMarginTwips = pageMargin?.Right ?? 1440;
+
+            // Convert twips → EMUs (1 twip = 635 EMUs)
+            return (int)((pageWidthTwips - leftMarginTwips - rightMarginTwips) * 635);
+        }
+        public static void FixImageSizes(OpenXmlElement element, int maxWidthEMU)
+        {
+            foreach (var extent in element.Descendants<DocumentFormat.OpenXml.Drawing.Wordprocessing.Extent>())
+            {
+                if (extent.Cx > maxWidthEMU)
+                {
+                    double scale = (double)maxWidthEMU / extent.Cx;
+                    extent.Cx = (long)(extent.Cx * scale);
+                    extent.Cy = (long)(extent.Cy * scale);
+                }
+            }
         }
 
         public static void ConvertNcToWord(string ncFilePath, string docxFilePath)
