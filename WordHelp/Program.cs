@@ -13,16 +13,22 @@ namespace WordHelp
         {
             var wordObj = new WordUtility();
 
+            string executablePath = AppDomain.CurrentDomain.BaseDirectory;
+            string exePath = System.Reflection.Assembly.GetExecutingAssembly().Location;
+            DirectoryInfo directoryInfo = new DirectoryInfo(exePath);
+            DirectoryInfo sourceFolder = Directory.GetParent(exePath).Parent.Parent.Parent;
+            string wordFilesFolder = Path.Combine(sourceFolder.FullName, "TestCases");
+
             var desktopPath = Environment.GetFolderPath(Environment.SpecialFolder.Desktop);
-            var filePath= System.IO.Path.Combine(desktopPath, "TemplateLandScape.docx");
-            var nctoword= System.IO.Path.Combine(desktopPath, "nctoword.docx");
-            var dummyTextFile= System.IO.Path.Combine(desktopPath, "DummyNCFile.txt");
+            var filePath= System.IO.Path.Combine(wordFilesFolder, "TemplateLandScape.docx");
+            //var nctoword= System.IO.Path.Combine(desktopPath, "nctoword.docx");
+            //var dummyTextFile= System.IO.Path.Combine(desktopPath, "DummyNCFile.txt");
             var filesToMerge = new string[] {
-                System.IO.Path.Combine(desktopPath, "Merge1.docx"),
-                System.IO.Path.Combine(desktopPath, "Merge2.docx"),
+                System.IO.Path.Combine(wordFilesFolder, "Merge1.docx"),
+                System.IO.Path.Combine(wordFilesFolder, "Merge2.docx"),
             };
-            var destinationFilePath = System.IO.Path.Combine(desktopPath, "Final Merge.docx");
-            var templateFilePath = System.IO.Path.Combine(desktopPath, "templateFile.docx");
+            var destinationFilePath = System.IO.Path.Combine(wordFilesFolder, "Final Merge.docx");
+            var templateFilePath = System.IO.Path.Combine(wordFilesFolder, "templateFile.docx");
 
             WordUtility.OpenWordDocument(wordObj, filePath);
             //WordUtility.ReplaceText(wordObj.wordDoc, "Hi", "Hello");
@@ -30,14 +36,14 @@ namespace WordHelp
             //WordUtility.InsertAPicture(wordObj.wordDoc, System.IO.Path.Combine(desktopPath, "Test.png"));
             //WordUtility.SaveWordProcessDocument(wordObj.wordDoc);
             //WordUtility.CloseWordProcessDocument(wordObj.wordDoc);
-            //WordUtility.MergeDocuments(templateFilePath,filesToMerge, destinationFilePath);
+            //WordUtility.MergeDocuments(templateFilePath, filesToMerge, destinationFilePath);
             ////WordUtility.MergeDocuments(filesToMerge, destinationFilePath);
 
             //DocxConverter.ConvertToHtml(destinationFilePath, System.IO.Path.Combine(desktopPath, "Final Merge.html"));
 
             //WordUtility.ConvertNcToWord(dummyTextFile,nctoword);
 
-            List<string> ImageFiles = Directory.GetFiles(Environment.GetFolderPath(Environment.SpecialFolder.Desktop), "*.jpg").ToList();
+            List<string> ImageFiles = Directory.GetFiles(wordFilesFolder, "*.jpg").ToList();
 
             foreach (string imageFile in ImageFiles) 
             {
@@ -47,7 +53,7 @@ namespace WordHelp
             WordUtility.CloseWordProcessDocument(wordObj.wordDoc);
 
             WordUtility.MergeDocuments(templateFilePath, filesToMerge, destinationFilePath);
-            DocxConverter.ConvertToHtml(destinationFilePath, System.IO.Path.Combine(desktopPath, "Final Merge.html"));
+            DocxConverter.ConvertToHtml(destinationFilePath, System.IO.Path.Combine(wordFilesFolder, "Final Merge.html"));
 
         }
     }

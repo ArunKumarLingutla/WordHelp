@@ -106,12 +106,14 @@ namespace WordHelp
                             // Clone and import elements
                             foreach (var element in srcPart.Document.Body.Elements())
                             {
-                                if (element is SectionProperties) continue;
+                                //if (element is SectionProperties) continue;
 
                                 var clonedElement = (OpenXmlElement)element.CloneNode(true);
 
                                 // Detach to avoid "part of a tree" error
                                 clonedElement = clonedElement.CloneNode(true);
+
+                                ForceLandscapeOnSection(clonedElement);
 
                                 // Remap image IDs
                                 ReMapImageReferences(clonedElement, imageMapping);
@@ -412,7 +414,38 @@ namespace WordHelp
             }
         }
 
+        public static void ForceLandscapeOnSection(OpenXmlElement element)
+        {
+            var sectPropsList = element.Descendants<SectionProperties>();
 
+            foreach (var sectProps in sectPropsList)
+            {
+                var pageSize = sectProps.GetFirstChild<PageSize>();
+
+                if (pageSize != null)
+                {
+                    // Swap width & height if portrait
+                    if (pageSize.Width < pageSize.Height)
+                    {
+                        UInt32Value temp = pageSize.Width;
+                        pageSize.Width = pageSize.Height;
+                        pageSize.Height = temp;
+                    }
+
+                    pageSize.Orient = PageOrientationValues.Landscape;
+                }
+                else
+                {
+                    // If no PageSize, create one
+                    sectProps.Append(new PageSize()
+                    {
+                        Width = 16838U,
+                        Height = 11906U,
+                        Orient = PageOrientationValues.Landscape
+                    });
+                }
+            }
+        }
 
 
         public static void ConvertToHTML(string strFilePath,string strOutputDirectory)
