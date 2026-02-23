@@ -69,6 +69,31 @@ namespace WordHelp
             }
             wordDoc.MainDocumentPart.Document.Save();
         }
+
+        public static void SetMarginsForAllSections(MainDocumentPart mainPart,int top = 720, int bottom = 720, int left = 720, int right = 720)
+        {
+            var body = mainPart.Document.Body;
+
+            // Get all SectionProperties in the document
+            var sections = body.Descendants<SectionProperties>();
+
+            foreach (var sectProps in sections)
+            {
+                var margin = sectProps.GetFirstChild<PageMargin>();
+
+                if (margin == null)
+                {
+                    margin = new PageMargin();
+                    sectProps.Append(margin);
+                }
+
+                //margin.Top = top;
+                //margin.Bottom = bottom;
+                margin.Left = 720;
+                margin.Right = 720;
+            }
+        }
+
         public static void MergeDocuments(string templateFile, string[] documentsToMerge, string destinationFile)
         {
             try
@@ -125,6 +150,7 @@ namespace WordHelp
                             }
                         }
                     }
+                    SetMarginsForAllSections(destinationDoc.MainDocumentPart);
 
                     // Save merged result
                     destinationDoc.MainDocumentPart.Document.Save();
