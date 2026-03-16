@@ -70,7 +70,7 @@ namespace WordHelp
             wordDoc.MainDocumentPart.Document.Save();
         }
 
-        public static void SetMarginsForAllSections(MainDocumentPart mainPart,int top = 720, int bottom = 720, int left = 720, int right = 720)
+        public static void SetMarginsForAllSections(MainDocumentPart mainPart, int top = 720, int bottom = 720, int left = 720, int right = 720)
         {
             var body = mainPart.Document.Body;
 
@@ -372,6 +372,7 @@ namespace WordHelp
             wordDoc.MainDocumentPart.Document.Body.AppendChild(new Paragraph(new Run(element)));
         }
 
+
         public static void ReplaceImage(WordprocessingDocument wordDoc, string newImagePath)
         {
 
@@ -474,7 +475,7 @@ namespace WordHelp
         }
 
 
-        public static void ConvertToHTML(string strFilePath,string strOutputDirectory)
+        public static void ConvertToHTML(string strFilePath, string strOutputDirectory)
         {
             // Setup variables and file paths
             //string strFilePath = "Path to your .docx file"; // Replace with your file path
@@ -560,6 +561,217 @@ namespace WordHelp
             {
                 throw;
             }
+        }
+
+        public static void InsertImagesWithCaptions(DocumentFormat.OpenXml.Packaging.WordprocessingDocument wordDoc, List<string> imagePaths)
+        {
+            DocumentFormat.OpenXml.Packaging.MainDocumentPart mainPart = wordDoc.MainDocumentPart;
+
+            DocumentFormat.OpenXml.Wordprocessing.Body body =
+                mainPart.Document.Body;
+
+            //DocumentFormat.OpenXml.Wordprocessing.SectionProperties section =
+            //    body.Elements<DocumentFormat.OpenXml.Wordprocessing.SectionProperties>().LastOrDefault();
+
+            SectionProperties section =body.Elements<SectionProperties>().LastOrDefault()?? body.AppendChild(new SectionProperties());
+
+            DocumentFormat.OpenXml.Wordprocessing.PageSize pageSize =
+                section.GetFirstChild<DocumentFormat.OpenXml.Wordprocessing.PageSize>();
+
+            DocumentFormat.OpenXml.Wordprocessing.PageMargin margin =
+                section.GetFirstChild<DocumentFormat.OpenXml.Wordprocessing.PageMargin>();
+
+            long usableWidthTwips =
+                pageSize.Width - margin.Left - margin.Right;
+
+            long usableHeightTwips =
+                pageSize.Height - margin.Top - margin.Bottom;
+
+            long usableWidthEMU = usableWidthTwips * 635;
+            long usableHeightEMU = usableHeightTwips * 635;
+
+            int imageCount = imagePaths.Count;
+
+            int cols = (int)Math.Ceiling(Math.Sqrt(imageCount));
+            int rows = (int)Math.Ceiling((double)imageCount / cols);
+
+            long cellWidthEMU = usableWidthEMU / cols;
+            long cellHeightEMU = usableHeightEMU / rows;
+
+            long imageHeight = (long)(cellHeightEMU * 0.7);
+            long imageWidth = (long)(cellWidthEMU * 0.9);
+
+            DocumentFormat.OpenXml.Wordprocessing.Table table =
+                new DocumentFormat.OpenXml.Wordprocessing.Table();
+
+            table.AppendChild(
+                new DocumentFormat.OpenXml.Wordprocessing.TableProperties(
+                    new DocumentFormat.OpenXml.Wordprocessing.TableBorders(
+                        new DocumentFormat.OpenXml.Wordprocessing.TopBorder
+                        { Val = DocumentFormat.OpenXml.Wordprocessing.BorderValues.None },
+                        new DocumentFormat.OpenXml.Wordprocessing.BottomBorder
+                        { Val = DocumentFormat.OpenXml.Wordprocessing.BorderValues.None },
+                        new DocumentFormat.OpenXml.Wordprocessing.LeftBorder
+                        { Val = DocumentFormat.OpenXml.Wordprocessing.BorderValues.None },
+                        new DocumentFormat.OpenXml.Wordprocessing.RightBorder
+                        { Val = DocumentFormat.OpenXml.Wordprocessing.BorderValues.None },
+                        new DocumentFormat.OpenXml.Wordprocessing.InsideHorizontalBorder
+                        { Val = DocumentFormat.OpenXml.Wordprocessing.BorderValues.None },
+                        new DocumentFormat.OpenXml.Wordprocessing.InsideVerticalBorder
+                        { Val = DocumentFormat.OpenXml.Wordprocessing.BorderValues.None }
+                    )));
+
+            int index = 0;
+            uint imageId = 1;
+
+            for (int r = 0; r < rows; r++)
+            {
+                DocumentFormat.OpenXml.Wordprocessing.TableRow tr =
+                    new DocumentFormat.OpenXml.Wordprocessing.TableRow();
+
+                for (int c = 0; c < cols; c++)
+                {
+                    DocumentFormat.OpenXml.Wordprocessing.TableCell tc =
+                        new DocumentFormat.OpenXml.Wordprocessing.TableCell();
+
+                    if (index < imageCount)
+                    {
+                        string imagePath = imagePaths[index];
+
+                        DocumentFormat.OpenXml.Wordprocessing.Drawing drawing =
+                            AddImage(mainPart, imagePath, imageWidth, imageHeight, imageId++);
+
+                        DocumentFormat.OpenXml.Wordprocessing.Paragraph imagePara =
+                            new DocumentFormat.OpenXml.Wordprocessing.Paragraph(
+                                new DocumentFormat.OpenXml.Wordprocessing.Run(drawing))
+                            {
+                                ParagraphProperties =
+                                    new DocumentFormat.OpenXml.Wordprocessing.ParagraphProperties(
+                                        new DocumentFormat.OpenXml.Wordprocessing.Justification
+                                        {
+                                            Val = DocumentFormat.OpenXml.Wordprocessing.JustificationValues.Center
+                                        })
+                            };
+
+                        string caption =
+                            System.IO.Path.GetFileNameWithoutExtension(imagePath);
+
+                        DocumentFormat.OpenXml.Wordprocessing.Paragraph captionPara =
+                            new DocumentFormat.OpenXml.Wordprocessing.Paragraph(
+                                new DocumentFormat.OpenXml.Wordprocessing.Run(
+                                    new DocumentFormat.OpenXml.Wordprocessing.Text(caption)))
+                            {
+                                ParagraphProperties =
+                                    new DocumentFormat.OpenXml.Wordprocessing.ParagraphProperties(
+                                        new DocumentFormat.OpenXml.Wordprocessing.Justification
+                                        {
+                                            Val = DocumentFormat.OpenXml.Wordprocessing.JustificationValues.Center
+                                        })
+                            };
+
+                        tc.Append(imagePara);
+                        tc.Append(captionPara);
+
+                        index++;
+                    }
+
+                    tc.Append(new DocumentFormat.OpenXml.Wordprocessing.TableCellProperties(
+                        new DocumentFormat.OpenXml.Wordprocessing.TableCellWidth
+                        {
+                            Type = DocumentFormat.OpenXml.Wordprocessing.TableWidthUnitValues.Dxa,
+                            Width = (usableWidthTwips / cols).ToString()
+                        }));
+
+                    tr.Append(tc);
+                }
+
+                table.Append(tr);
+            }
+
+            body.Append(table);
+        }
+        private static DocumentFormat.OpenXml.Wordprocessing.Drawing AddImage(DocumentFormat.OpenXml.Packaging.MainDocumentPart mainPart, string imagePath, long width, long height, UInt32 imageId)
+        {
+            var type =
+                DocumentFormat.OpenXml.Packaging.ImagePartType.Jpeg;
+
+            string ext = System.IO.Path.GetExtension(imagePath).ToLower();
+
+            if (ext == ".png")
+                type = DocumentFormat.OpenXml.Packaging.ImagePartType.Png;
+
+            if (ext == ".bmp")
+                type = DocumentFormat.OpenXml.Packaging.ImagePartType.Bmp;
+
+            DocumentFormat.OpenXml.Packaging.ImagePart imagePart =
+                mainPart.AddImagePart(type);
+
+            using (System.IO.FileStream stream =
+                   new System.IO.FileStream(imagePath, System.IO.FileMode.Open))
+            {
+                imagePart.FeedData(stream);
+            }
+
+            string relId = mainPart.GetIdOfPart(imagePart);
+
+            return new DocumentFormat.OpenXml.Wordprocessing.Drawing(
+                new DocumentFormat.OpenXml.Drawing.Wordprocessing.Inline(
+                    new DocumentFormat.OpenXml.Drawing.Wordprocessing.Extent
+                    {
+                        Cx = width,
+                        Cy = height
+                    },
+                    new DocumentFormat.OpenXml.Drawing.Wordprocessing.DocProperties
+                    {
+                        Id = (UInt32Value)imageId,
+                        Name = "Picture"
+                    },
+                    new DocumentFormat.OpenXml.Drawing.Graphic(
+                        new DocumentFormat.OpenXml.Drawing.GraphicData(
+                            new DocumentFormat.OpenXml.Drawing.Pictures.Picture(
+                                new DocumentFormat.OpenXml.Drawing.Pictures.NonVisualPictureProperties(
+                                    new DocumentFormat.OpenXml.Drawing.Pictures.NonVisualDrawingProperties
+                                    {
+                                        Id = 0U,
+                                        Name = "Image"
+                                    },
+                                    new DocumentFormat.OpenXml.Drawing.Pictures.NonVisualPictureDrawingProperties()
+                                ),
+                                new DocumentFormat.OpenXml.Drawing.Pictures.BlipFill(
+                                    new DocumentFormat.OpenXml.Drawing.Blip
+                                    {
+                                        Embed = relId
+                                    },
+                                    new DocumentFormat.OpenXml.Drawing.Stretch(
+                                        new DocumentFormat.OpenXml.Drawing.FillRectangle())
+                                ),
+                                new DocumentFormat.OpenXml.Drawing.Pictures.ShapeProperties(
+                                    new DocumentFormat.OpenXml.Drawing.Transform2D(
+                                        new DocumentFormat.OpenXml.Drawing.Offset
+                                        {
+                                            X = 0,
+                                            Y = 0
+                                        },
+                                        new DocumentFormat.OpenXml.Drawing.Extents
+                                        {
+                                            Cx = width,
+                                            Cy = height
+                                        }),
+                                    new DocumentFormat.OpenXml.Drawing.PresetGeometry(
+                                        new DocumentFormat.OpenXml.Drawing.AdjustValueList())
+                                    {
+                                        Preset =
+                                        DocumentFormat.OpenXml.Drawing.ShapeTypeValues.Rectangle
+                                    })
+                            )
+                        )
+                        {
+                            Uri =
+                            "http://schemas.openxmlformats.org/drawingml/2006/picture"
+                        }
+                    )
+                )
+            );
         }
     }
 }

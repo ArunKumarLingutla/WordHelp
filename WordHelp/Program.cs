@@ -30,7 +30,7 @@ namespace WordHelp
             var destinationFilePath = System.IO.Path.Combine(wordFilesFolder, "Final Merge.docx");
             var templateFilePath = System.IO.Path.Combine(wordFilesFolder, "templateFile.docx");
 
-            WordUtility.OpenWordDocument(wordObj, filePath);
+            //WordUtility.OpenWordDocument(wordObj, multipleImagesFile);
             //WordUtility.ReplaceText(wordObj.wordDoc, "Hi", "Hello");
             //WordUtility.ReplaceImage(wordObj.wordDoc,System.IO.Path.Combine(desktopPath, "Test.png"));
             //WordUtility.InsertAPicture(wordObj.wordDoc, System.IO.Path.Combine(desktopPath, "Test.png"));
@@ -43,17 +43,25 @@ namespace WordHelp
 
             //WordUtility.ConvertNcToWord(dummyTextFile,nctoword);
 
+            var multipleImagesFile = Path.Combine(wordFilesFolder, "MultipleImages.docx");
+            File.Copy(templateFilePath, multipleImagesFile, true);
+            WordUtility.OpenWordDocument(wordObj, multipleImagesFile);
+
             List<string> ImageFiles = Directory.GetFiles(wordFilesFolder, "*.jpg").ToList();
+            WordUtility.InsertImagesWithCaptions(wordObj.wordDoc, ImageFiles);
+                WordUtility.SaveAs(wordObj.wordDoc, Path.Combine(desktopPath, "MultipleImagesWithCaptions.docx"));
+                WordUtility.CloseWordProcessDocument(wordObj.wordDoc);
+            //foreach (string imageFile in ImageFiles)
+            //{
+            //    WordUtility.InsertAPicture(wordObj.wordDoc, imageFile);
+            //}
+            //WordUtility.SaveAs(wordObj.wordDoc, Path.Combine(desktopPath, "1 Tool Sheet.docx"));
+            //WordUtility.CloseWordProcessDocument(wordObj.wordDoc);
 
-            foreach (string imageFile in ImageFiles) 
-            {
-                WordUtility.InsertAPicture(wordObj.wordDoc, imageFile);
-            }
-            WordUtility.SaveAs(wordObj.wordDoc,Path.Combine(desktopPath,"1 Tool Sheet.docx"));
-            WordUtility.CloseWordProcessDocument(wordObj.wordDoc);
+            //WordUtility.MergeDocuments(templateFilePath, filesToMerge, destinationFilePath);
+            //DocxConverter.ConvertToHtml(destinationFilePath, System.IO.Path.Combine(wordFilesFolder, "Final Merge.html"));
 
-            WordUtility.MergeDocuments(templateFilePath, filesToMerge, destinationFilePath);
-            DocxConverter.ConvertToHtml(destinationFilePath, System.IO.Path.Combine(wordFilesFolder, "Final Merge.html"));
+
 
         }
     }
