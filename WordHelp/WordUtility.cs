@@ -562,175 +562,218 @@ namespace WordHelp
                 throw;
             }
         }
-
-        public static void InsertImagesWithCaptions(DocumentFormat.OpenXml.Packaging.WordprocessingDocument wordDoc, List<string> imagePaths)
+        public static void InsertImagesWithCaptions(
+        WordprocessingDocument wordDoc,
+        List<string> imagePaths)
         {
-            DocumentFormat.OpenXml.Packaging.MainDocumentPart mainPart = wordDoc.MainDocumentPart;
+            MainDocumentPart mainPart = wordDoc.MainDocumentPart;
+            Body body = mainPart.Document.Body;
 
-            DocumentFormat.OpenXml.Wordprocessing.Body body =
-                mainPart.Document.Body;
-
-            //DocumentFormat.OpenXml.Wordprocessing.SectionProperties section =
-            //    body.Elements<DocumentFormat.OpenXml.Wordprocessing.SectionProperties>().LastOrDefault();
-
-            SectionProperties section =body.Elements<SectionProperties>().LastOrDefault()?? body.AppendChild(new SectionProperties());
-
-            DocumentFormat.OpenXml.Wordprocessing.PageSize pageSize =
-                section.GetFirstChild<DocumentFormat.OpenXml.Wordprocessing.PageSize>();
-
-            DocumentFormat.OpenXml.Wordprocessing.PageMargin margin =
-                section.GetFirstChild<DocumentFormat.OpenXml.Wordprocessing.PageMargin>();
-
-            long usableWidthTwips =
-                pageSize.Width - margin.Left - margin.Right;
-
-            long usableHeightTwips =
-                pageSize.Height - margin.Top - margin.Bottom;
-
-            long usableWidthEMU = usableWidthTwips * 635;
-            long usableHeightEMU = usableHeightTwips * 635;
-
-            int imageCount = imagePaths.Count;
-
-            int cols = (int)Math.Ceiling(Math.Sqrt(imageCount));
-            int rows = (int)Math.Ceiling((double)imageCount / cols);
-
-            long cellWidthEMU = usableWidthEMU / cols;
-            long cellHeightEMU = usableHeightEMU / rows;
-
-            long imageHeight = (long)(cellHeightEMU * 0.7);
-            long imageWidth = (long)(cellWidthEMU * 0.9);
-
-            DocumentFormat.OpenXml.Wordprocessing.Table table =
-                new DocumentFormat.OpenXml.Wordprocessing.Table();
-
-            table.AppendChild(
-                new DocumentFormat.OpenXml.Wordprocessing.TableProperties(
-                    new DocumentFormat.OpenXml.Wordprocessing.TableBorders(
-                        new DocumentFormat.OpenXml.Wordprocessing.TopBorder
-                        { Val = DocumentFormat.OpenXml.Wordprocessing.BorderValues.None },
-                        new DocumentFormat.OpenXml.Wordprocessing.BottomBorder
-                        { Val = DocumentFormat.OpenXml.Wordprocessing.BorderValues.None },
-                        new DocumentFormat.OpenXml.Wordprocessing.LeftBorder
-                        { Val = DocumentFormat.OpenXml.Wordprocessing.BorderValues.None },
-                        new DocumentFormat.OpenXml.Wordprocessing.RightBorder
-                        { Val = DocumentFormat.OpenXml.Wordprocessing.BorderValues.None },
-                        new DocumentFormat.OpenXml.Wordprocessing.InsideHorizontalBorder
-                        { Val = DocumentFormat.OpenXml.Wordprocessing.BorderValues.None },
-                        new DocumentFormat.OpenXml.Wordprocessing.InsideVerticalBorder
-                        { Val = DocumentFormat.OpenXml.Wordprocessing.BorderValues.None }
-                    )));
-
-            int index = 0;
+            const int maxImagesPerPage = 8;
             uint imageId = 1;
 
-            for (int r = 0; r < rows; r++)
+            for (int pageStart = 0; pageStart < imagePaths.Count; pageStart += maxImagesPerPage)
             {
-                DocumentFormat.OpenXml.Wordprocessing.TableRow tr =
-                    new DocumentFormat.OpenXml.Wordprocessing.TableRow();
+                List<string> pageImages =
+                    imagePaths.Skip(pageStart).Take(maxImagesPerPage).ToList();
 
-                for (int c = 0; c < cols; c++)
-                {
-                    DocumentFormat.OpenXml.Wordprocessing.TableCell tc =
-                        new DocumentFormat.OpenXml.Wordprocessing.TableCell();
+                SectionProperties section =
+                    body.Elements<SectionProperties>().LastOrDefault()
+                    ?? body.AppendChild(new SectionProperties());
 
-                    if (index < imageCount)
+                PageSize pageSize =
+                    section.GetFirstChild<PageSize>() ??
+                    new PageSize() { Width = 12240, Height = 15840 };
+
+                PageMargin margin =
+                    section.GetFirstChild<PageMargin>() ??
+                    new PageMargin()
                     {
-                        string imagePath = imagePaths[index];
+                        Left = 1440,
+                        Right = 1440,
+                        Top = 1440,
+                        Bottom = 1440
+                    };
 
-                        DocumentFormat.OpenXml.Wordprocessing.Drawing drawing =
-                            AddImage(mainPart, imagePath, imageWidth, imageHeight, imageId++);
+                long usableWidthTwips =
+                    pageSize.Width - margin.Left - margin.Right;
 
-                        DocumentFormat.OpenXml.Wordprocessing.Paragraph imagePara =
-                            new DocumentFormat.OpenXml.Wordprocessing.Paragraph(
-                                new DocumentFormat.OpenXml.Wordprocessing.Run(drawing))
+                long usableHeightTwips =
+                    pageSize.Height - margin.Top - margin.Bottom;
+
+                long usableWidthEMU = usableWidthTwips * 635;
+                long usableHeightEMU = usableHeightTwips * 635;
+
+                int cols = 4;
+                int rows = 2;
+
+                long cellWidthEMU = usableWidthEMU / cols;
+                long cellHeightEMU = usableHeightEMU / rows;
+
+                long imageWidth = (long)(cellWidthEMU * 0.9);
+                long imageHeight = (long)(cellHeightEMU * 0.7);
+
+                DocumentFormat.OpenXml.Wordprocessing.Table table = new DocumentFormat.OpenXml.Wordprocessing.Table();
+
+                table.AppendChild(
+                    new TableProperties(
+                        new TableBorders(
+                            new TopBorder { Val = BorderValues.None },
+                            new BottomBorder { Val = BorderValues.None },
+                            new LeftBorder { Val = BorderValues.None },
+                            new RightBorder { Val = BorderValues.None },
+                            new InsideHorizontalBorder { Val = BorderValues.None },
+                            new InsideVerticalBorder { Val = BorderValues.None }
+                        )));
+
+                int index = 0;
+
+                for (int r = 0; r < rows; r++)
+                {
+                    DocumentFormat.OpenXml.Wordprocessing.TableRow tr = new DocumentFormat.OpenXml.Wordprocessing.TableRow();
+
+                    for (int c = 0; c < cols; c++)
+                    {
+                        DocumentFormat.OpenXml.Wordprocessing.TableCell tc = new DocumentFormat.OpenXml.Wordprocessing.TableCell();
+
+                        if (index < pageImages.Count)
+                        {
+                            string imagePath = pageImages[index];
+
+                            Drawing drawing =
+                                AddImage(mainPart, imagePath, imageWidth, imageHeight, imageId++);
+
+                            Paragraph imagePara =
+                                new Paragraph(
+                                    new Run(drawing))
+                                {
+                                    ParagraphProperties =
+                                        new ParagraphProperties(
+                                            new Justification()
+                                            {
+                                                Val = JustificationValues.Center
+                                            })
+                                };
+
+                            string caption =
+                                Path.GetFileNameWithoutExtension(imagePath);
+
+                            Paragraph captionPara =
+                                new Paragraph(
+                                    new Run(
+                                        new Text(caption)))
+                                {
+                                    ParagraphProperties =
+                                        new ParagraphProperties(
+                                            new Justification()
+                                            {
+                                                Val = JustificationValues.Center
+                                            })
+                                };
+
+                            tc.Append(imagePara);
+                            tc.Append(captionPara);
+
+                            index++;
+                        }
+
+                        tc.Append(new TableCellProperties(
+                            new TableCellWidth()
                             {
-                                ParagraphProperties =
-                                    new DocumentFormat.OpenXml.Wordprocessing.ParagraphProperties(
-                                        new DocumentFormat.OpenXml.Wordprocessing.Justification
-                                        {
-                                            Val = DocumentFormat.OpenXml.Wordprocessing.JustificationValues.Center
-                                        })
-                            };
+                                Type = TableWidthUnitValues.Dxa,
+                                Width = (usableWidthTwips / cols).ToString()
+                            }));
 
-                        string caption =
-                            System.IO.Path.GetFileNameWithoutExtension(imagePath);
-
-                        DocumentFormat.OpenXml.Wordprocessing.Paragraph captionPara =
-                            new DocumentFormat.OpenXml.Wordprocessing.Paragraph(
-                                new DocumentFormat.OpenXml.Wordprocessing.Run(
-                                    new DocumentFormat.OpenXml.Wordprocessing.Text(caption)))
-                            {
-                                ParagraphProperties =
-                                    new DocumentFormat.OpenXml.Wordprocessing.ParagraphProperties(
-                                        new DocumentFormat.OpenXml.Wordprocessing.Justification
-                                        {
-                                            Val = DocumentFormat.OpenXml.Wordprocessing.JustificationValues.Center
-                                        })
-                            };
-
-                        tc.Append(imagePara);
-                        tc.Append(captionPara);
-
-                        index++;
+                        tr.Append(tc);
                     }
 
-                    tc.Append(new DocumentFormat.OpenXml.Wordprocessing.TableCellProperties(
-                        new DocumentFormat.OpenXml.Wordprocessing.TableCellWidth
-                        {
-                            Type = DocumentFormat.OpenXml.Wordprocessing.TableWidthUnitValues.Dxa,
-                            Width = (usableWidthTwips / cols).ToString()
-                        }));
-
-                    tr.Append(tc);
+                    table.Append(tr);
                 }
 
-                table.Append(tr);
+                body.Append(table);
+
+                if (pageStart + maxImagesPerPage < imagePaths.Count)
+                {
+                    body.Append(
+                        new Paragraph(
+                            new Run(
+                                new Break()
+                                {
+                                    Type = BreakValues.Page
+                                })));
+                }
             }
-
-            body.Append(table);
         }
-        private static DocumentFormat.OpenXml.Wordprocessing.Drawing AddImage(DocumentFormat.OpenXml.Packaging.MainDocumentPart mainPart, string imagePath, long width, long height, UInt32 imageId)
+
+        private static Drawing AddImage(
+            MainDocumentPart mainPart,
+            string imagePath,
+            long width,
+            long height,
+            UInt32 imageId)
         {
-            var type =
-                DocumentFormat.OpenXml.Packaging.ImagePartType.Jpeg;
+            //var type = ImagePartType.Jpeg;
 
-            string ext = System.IO.Path.GetExtension(imagePath).ToLower();
+            //string ext = Path.GetExtension(imagePath).ToLower();
+            var type = ImagePartType.Jpeg;
 
-            if (ext == ".png")
-                type = DocumentFormat.OpenXml.Packaging.ImagePartType.Png;
+            string ext = Path.GetExtension(imagePath).ToLower();
 
-            if (ext == ".bmp")
-                type = DocumentFormat.OpenXml.Packaging.ImagePartType.Bmp;
+            switch (ext)
+            {
+                case ".png":
+                    type = ImagePartType.Png;
+                    break;
 
-            DocumentFormat.OpenXml.Packaging.ImagePart imagePart =
-                mainPart.AddImagePart(type);
+                case ".bmp":
+                    type = ImagePartType.Bmp;
+                    break;
 
-            using (System.IO.FileStream stream =
-                   new System.IO.FileStream(imagePath, System.IO.FileMode.Open))
+                case ".gif":
+                    type = ImagePartType.Gif;
+                    break;
+
+                case ".tiff":
+                case ".tif":
+                    type = ImagePartType.Tiff;
+                    break;
+
+                case ".jpeg":
+                case ".jpg":
+                default:
+                    type = ImagePartType.Jpeg;
+                    break;
+            }
+            if (ext == ".png") type = ImagePartType.Png;
+            if (ext == ".bmp") type = ImagePartType.Bmp;
+
+            ImagePart imagePart = mainPart.AddImagePart(type);
+
+            using (FileStream stream =
+                   new FileStream(imagePath, FileMode.Open))
             {
                 imagePart.FeedData(stream);
             }
 
             string relId = mainPart.GetIdOfPart(imagePart);
 
-            return new DocumentFormat.OpenXml.Wordprocessing.Drawing(
+            return new Drawing(
                 new DocumentFormat.OpenXml.Drawing.Wordprocessing.Inline(
-                    new DocumentFormat.OpenXml.Drawing.Wordprocessing.Extent
+                    new DocumentFormat.OpenXml.Drawing.Wordprocessing.Extent()
                     {
                         Cx = width,
                         Cy = height
                     },
-                    new DocumentFormat.OpenXml.Drawing.Wordprocessing.DocProperties
+                    new DocumentFormat.OpenXml.Drawing.Wordprocessing.DocProperties()
                     {
-                        Id = (UInt32Value)imageId,
+                        Id = imageId,
                         Name = "Picture"
                     },
                     new DocumentFormat.OpenXml.Drawing.Graphic(
                         new DocumentFormat.OpenXml.Drawing.GraphicData(
                             new DocumentFormat.OpenXml.Drawing.Pictures.Picture(
                                 new DocumentFormat.OpenXml.Drawing.Pictures.NonVisualPictureProperties(
-                                    new DocumentFormat.OpenXml.Drawing.Pictures.NonVisualDrawingProperties
+                                    new DocumentFormat.OpenXml.Drawing.Pictures.NonVisualDrawingProperties()
                                     {
                                         Id = 0U,
                                         Name = "Image"
@@ -738,7 +781,7 @@ namespace WordHelp
                                     new DocumentFormat.OpenXml.Drawing.Pictures.NonVisualPictureDrawingProperties()
                                 ),
                                 new DocumentFormat.OpenXml.Drawing.Pictures.BlipFill(
-                                    new DocumentFormat.OpenXml.Drawing.Blip
+                                    new DocumentFormat.OpenXml.Drawing.Blip()
                                     {
                                         Embed = relId
                                     },
@@ -747,12 +790,12 @@ namespace WordHelp
                                 ),
                                 new DocumentFormat.OpenXml.Drawing.Pictures.ShapeProperties(
                                     new DocumentFormat.OpenXml.Drawing.Transform2D(
-                                        new DocumentFormat.OpenXml.Drawing.Offset
+                                        new DocumentFormat.OpenXml.Drawing.Offset()
                                         {
                                             X = 0,
                                             Y = 0
                                         },
-                                        new DocumentFormat.OpenXml.Drawing.Extents
+                                        new DocumentFormat.OpenXml.Drawing.Extents()
                                         {
                                             Cx = width,
                                             Cy = height
@@ -773,5 +816,216 @@ namespace WordHelp
                 )
             );
         }
+        //public static void InsertImagesWithCaptions(DocumentFormat.OpenXml.Packaging.WordprocessingDocument wordDoc, List<string> imagePaths)
+        //{
+        //    DocumentFormat.OpenXml.Packaging.MainDocumentPart mainPart = wordDoc.MainDocumentPart;
+
+        //    DocumentFormat.OpenXml.Wordprocessing.Body body =
+        //        mainPart.Document.Body;
+
+        //    //DocumentFormat.OpenXml.Wordprocessing.SectionProperties section =
+        //    //    body.Elements<DocumentFormat.OpenXml.Wordprocessing.SectionProperties>().LastOrDefault();
+
+        //    SectionProperties section =body.Elements<SectionProperties>().LastOrDefault()?? body.AppendChild(new SectionProperties());
+
+        //    DocumentFormat.OpenXml.Wordprocessing.PageSize pageSize =
+        //        section.GetFirstChild<DocumentFormat.OpenXml.Wordprocessing.PageSize>();
+
+        //    DocumentFormat.OpenXml.Wordprocessing.PageMargin margin =
+        //        section.GetFirstChild<DocumentFormat.OpenXml.Wordprocessing.PageMargin>();
+
+        //    long usableWidthTwips =
+        //        pageSize.Width - margin.Left - margin.Right;
+
+        //    long usableHeightTwips =
+        //        pageSize.Height - margin.Top - margin.Bottom;
+
+        //    long usableWidthEMU = usableWidthTwips * 635;
+        //    long usableHeightEMU = usableHeightTwips * 635;
+
+        //    int imageCount = imagePaths.Count;
+
+        //    int cols = (int)Math.Ceiling(Math.Sqrt(imageCount));
+        //    int rows = (int)Math.Ceiling((double)imageCount / cols);
+
+        //    long cellWidthEMU = usableWidthEMU / cols;
+        //    long cellHeightEMU = usableHeightEMU / rows;
+
+        //    long imageHeight = (long)(cellHeightEMU * 0.7);
+        //    long imageWidth = (long)(cellWidthEMU * 0.9);
+
+        //    DocumentFormat.OpenXml.Wordprocessing.Table table =
+        //        new DocumentFormat.OpenXml.Wordprocessing.Table();
+
+        //    table.AppendChild(
+        //        new DocumentFormat.OpenXml.Wordprocessing.TableProperties(
+        //            new DocumentFormat.OpenXml.Wordprocessing.TableBorders(
+        //                new DocumentFormat.OpenXml.Wordprocessing.TopBorder
+        //                { Val = DocumentFormat.OpenXml.Wordprocessing.BorderValues.None },
+        //                new DocumentFormat.OpenXml.Wordprocessing.BottomBorder
+        //                { Val = DocumentFormat.OpenXml.Wordprocessing.BorderValues.None },
+        //                new DocumentFormat.OpenXml.Wordprocessing.LeftBorder
+        //                { Val = DocumentFormat.OpenXml.Wordprocessing.BorderValues.None },
+        //                new DocumentFormat.OpenXml.Wordprocessing.RightBorder
+        //                { Val = DocumentFormat.OpenXml.Wordprocessing.BorderValues.None },
+        //                new DocumentFormat.OpenXml.Wordprocessing.InsideHorizontalBorder
+        //                { Val = DocumentFormat.OpenXml.Wordprocessing.BorderValues.None },
+        //                new DocumentFormat.OpenXml.Wordprocessing.InsideVerticalBorder
+        //                { Val = DocumentFormat.OpenXml.Wordprocessing.BorderValues.None }
+        //            )));
+
+        //    int index = 0;
+        //    uint imageId = 1;
+
+        //    for (int r = 0; r < rows; r++)
+        //    {
+        //        DocumentFormat.OpenXml.Wordprocessing.TableRow tr =
+        //            new DocumentFormat.OpenXml.Wordprocessing.TableRow();
+
+        //        for (int c = 0; c < cols; c++)
+        //        {
+        //            DocumentFormat.OpenXml.Wordprocessing.TableCell tc =
+        //                new DocumentFormat.OpenXml.Wordprocessing.TableCell();
+
+        //            if (index < imageCount)
+        //            {
+        //                string imagePath = imagePaths[index];
+
+        //                DocumentFormat.OpenXml.Wordprocessing.Drawing drawing =
+        //                    AddImage(mainPart, imagePath, imageWidth, imageHeight, imageId++);
+
+        //                DocumentFormat.OpenXml.Wordprocessing.Paragraph imagePara =
+        //                    new DocumentFormat.OpenXml.Wordprocessing.Paragraph(
+        //                        new DocumentFormat.OpenXml.Wordprocessing.Run(drawing))
+        //                    {
+        //                        ParagraphProperties =
+        //                            new DocumentFormat.OpenXml.Wordprocessing.ParagraphProperties(
+        //                                new DocumentFormat.OpenXml.Wordprocessing.Justification
+        //                                {
+        //                                    Val = DocumentFormat.OpenXml.Wordprocessing.JustificationValues.Center
+        //                                })
+        //                    };
+
+        //                string caption =
+        //                    System.IO.Path.GetFileNameWithoutExtension(imagePath);
+
+        //                DocumentFormat.OpenXml.Wordprocessing.Paragraph captionPara =
+        //                    new DocumentFormat.OpenXml.Wordprocessing.Paragraph(
+        //                        new DocumentFormat.OpenXml.Wordprocessing.Run(
+        //                            new DocumentFormat.OpenXml.Wordprocessing.Text(caption)))
+        //                    {
+        //                        ParagraphProperties =
+        //                            new DocumentFormat.OpenXml.Wordprocessing.ParagraphProperties(
+        //                                new DocumentFormat.OpenXml.Wordprocessing.Justification
+        //                                {
+        //                                    Val = DocumentFormat.OpenXml.Wordprocessing.JustificationValues.Center
+        //                                })
+        //                    };
+
+        //                tc.Append(imagePara);
+        //                tc.Append(captionPara);
+
+        //                index++;
+        //            }
+
+        //            tc.Append(new DocumentFormat.OpenXml.Wordprocessing.TableCellProperties(
+        //                new DocumentFormat.OpenXml.Wordprocessing.TableCellWidth
+        //                {
+        //                    Type = DocumentFormat.OpenXml.Wordprocessing.TableWidthUnitValues.Dxa,
+        //                    Width = (usableWidthTwips / cols).ToString()
+        //                }));
+
+        //            tr.Append(tc);
+        //        }
+
+        //        table.Append(tr);
+        //    }
+
+        //    body.Append(table);
+        //}
+        //private static DocumentFormat.OpenXml.Wordprocessing.Drawing AddImage(DocumentFormat.OpenXml.Packaging.MainDocumentPart mainPart, string imagePath, long width, long height, UInt32 imageId)
+        //{
+        //    var type =
+        //        DocumentFormat.OpenXml.Packaging.ImagePartType.Jpeg;
+
+        //    string ext = System.IO.Path.GetExtension(imagePath).ToLower();
+
+        //    if (ext == ".png")
+        //        type = DocumentFormat.OpenXml.Packaging.ImagePartType.Png;
+
+        //    if (ext == ".bmp")
+        //        type = DocumentFormat.OpenXml.Packaging.ImagePartType.Bmp;
+
+        //    DocumentFormat.OpenXml.Packaging.ImagePart imagePart =
+        //        mainPart.AddImagePart(type);
+
+        //    using (System.IO.FileStream stream =
+        //           new System.IO.FileStream(imagePath, System.IO.FileMode.Open))
+        //    {
+        //        imagePart.FeedData(stream);
+        //    }
+
+        //    string relId = mainPart.GetIdOfPart(imagePart);
+
+        //    return new DocumentFormat.OpenXml.Wordprocessing.Drawing(
+        //        new DocumentFormat.OpenXml.Drawing.Wordprocessing.Inline(
+        //            new DocumentFormat.OpenXml.Drawing.Wordprocessing.Extent
+        //            {
+        //                Cx = width,
+        //                Cy = height
+        //            },
+        //            new DocumentFormat.OpenXml.Drawing.Wordprocessing.DocProperties
+        //            {
+        //                Id = (UInt32Value)imageId,
+        //                Name = "Picture"
+        //            },
+        //            new DocumentFormat.OpenXml.Drawing.Graphic(
+        //                new DocumentFormat.OpenXml.Drawing.GraphicData(
+        //                    new DocumentFormat.OpenXml.Drawing.Pictures.Picture(
+        //                        new DocumentFormat.OpenXml.Drawing.Pictures.NonVisualPictureProperties(
+        //                            new DocumentFormat.OpenXml.Drawing.Pictures.NonVisualDrawingProperties
+        //                            {
+        //                                Id = 0U,
+        //                                Name = "Image"
+        //                            },
+        //                            new DocumentFormat.OpenXml.Drawing.Pictures.NonVisualPictureDrawingProperties()
+        //                        ),
+        //                        new DocumentFormat.OpenXml.Drawing.Pictures.BlipFill(
+        //                            new DocumentFormat.OpenXml.Drawing.Blip
+        //                            {
+        //                                Embed = relId
+        //                            },
+        //                            new DocumentFormat.OpenXml.Drawing.Stretch(
+        //                                new DocumentFormat.OpenXml.Drawing.FillRectangle())
+        //                        ),
+        //                        new DocumentFormat.OpenXml.Drawing.Pictures.ShapeProperties(
+        //                            new DocumentFormat.OpenXml.Drawing.Transform2D(
+        //                                new DocumentFormat.OpenXml.Drawing.Offset
+        //                                {
+        //                                    X = 0,
+        //                                    Y = 0
+        //                                },
+        //                                new DocumentFormat.OpenXml.Drawing.Extents
+        //                                {
+        //                                    Cx = width,
+        //                                    Cy = height
+        //                                }),
+        //                            new DocumentFormat.OpenXml.Drawing.PresetGeometry(
+        //                                new DocumentFormat.OpenXml.Drawing.AdjustValueList())
+        //                            {
+        //                                Preset =
+        //                                DocumentFormat.OpenXml.Drawing.ShapeTypeValues.Rectangle
+        //                            })
+        //                    )
+        //                )
+        //                {
+        //                    Uri =
+        //                    "http://schemas.openxmlformats.org/drawingml/2006/picture"
+        //                }
+        //            )
+        //        )
+        //    );
+        //}
+
     }
 }
