@@ -816,6 +816,40 @@ namespace WordHelp
                 )
             );
         }
+        public static void InsertHyperLink(WordprocessingDocument wordDoc, string displayText, string path)
+        {
+            MainDocumentPart mainPart = wordDoc.MainDocumentPart;
+            Body body = mainPart.Document.Body;
+
+            // Step 1: Add the relationship and get its ID
+            HyperlinkRelationship rel = mainPart.AddHyperlinkRelationship(
+                new Uri(path), true);
+            string relationshipId = rel.Id;
+
+            // Step 2: Define run properties (optional styling)
+            RunProperties runProps = new RunProperties(
+                new RunStyle() { Val = "Hyperlink" },  // applies built-in hyperlink style
+                new Color() { Val = "0563C1" },
+                new Underline() { Val = UnderlineValues.Single }
+            );
+
+            // Step 3: Create the run with display text
+            Run run = new Run(runProps, new Text(displayText));
+
+            // Step 4: Wrap in a Hyperlink element
+            Hyperlink hyperlink = new Hyperlink(run)
+            {
+                Id = relationshipId,         // links to the relationship
+                History = OnOffValue.FromBoolean(true)
+            };
+
+            // Step 5: Add to a paragraph and insert into document
+            Paragraph paragraph = new Paragraph(hyperlink);
+            body.AppendChild(paragraph);
+
+            mainPart.Document.Save();
+
+        }
         //public static void InsertImagesWithCaptions(DocumentFormat.OpenXml.Packaging.WordprocessingDocument wordDoc, List<string> imagePaths)
         //{
         //    DocumentFormat.OpenXml.Packaging.MainDocumentPart mainPart = wordDoc.MainDocumentPart;

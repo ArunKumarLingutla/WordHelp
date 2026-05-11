@@ -43,14 +43,25 @@ namespace WordHelp
 
             //WordUtility.ConvertNcToWord(dummyTextFile,nctoword);
 
-            var multipleImagesFile = Path.Combine(wordFilesFolder, "MultipleImages.docx");
-            File.Copy(templateFilePath, multipleImagesFile, true);
-            WordUtility.OpenWordDocument(wordObj, multipleImagesFile);
+            //var multipleImagesFile = Path.Combine(wordFilesFolder, "MultipleImages.docx");
+            //File.Copy(templateFilePath, multipleImagesFile, true);
+            //WordUtility.OpenWordDocument(wordObj, multipleImagesFile);
 
-            List<string> ImageFiles = Directory.GetFiles(wordFilesFolder, "*.jpg").ToList();
-            WordUtility.InsertImagesWithCaptions(wordObj.wordDoc, ImageFiles);
-                WordUtility.SaveAs(wordObj.wordDoc, Path.Combine(desktopPath, "MultipleImagesWithCaptions.docx"));
-                WordUtility.CloseWordProcessDocument(wordObj.wordDoc);
+            //List<string> ImageFiles = Directory.GetFiles(wordFilesFolder, "*.jpg").ToList();
+            //WordUtility.InsertImagesWithCaptions(wordObj.wordDoc, ImageFiles);
+            //    WordUtility.SaveAs(wordObj.wordDoc, Path.Combine(desktopPath, "MultipleImagesWithCaptions.docx"));
+            //    WordUtility.CloseWordProcessDocument(wordObj.wordDoc);
+
+
+            var templateForHyperLinks = Path.Combine(wordFilesFolder, "HyperLinkTemplate.docx");
+            File.Copy(templateFilePath, templateForHyperLinks, true);
+            WordUtility.OpenWordDocument(wordObj, templateForHyperLinks);
+            for (int i = 0; i < 10; i++)
+            {
+                WordUtility.InsertHyperLink(wordObj.wordDoc, "Google", "C:\\Users\\arunk\\source\\repos\\WordHelp\\TestCases");
+            }
+            WordUtility.SaveWordProcessDocument(wordObj.wordDoc);
+            WordUtility.CloseWordProcessDocument(wordObj.wordDoc);
             //foreach (string imageFile in ImageFiles)
             //{
             //    WordUtility.InsertAPicture(wordObj.wordDoc, imageFile);
