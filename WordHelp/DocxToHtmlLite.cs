@@ -231,28 +231,18 @@ namespace WordHelp
                 }
                 else
                 {
-                    // Try external relationships (file paths)
-                    var anyRel = doc.MainDocumentPart.ExternalRelationships
-                        .FirstOrDefault(r => r.Id == hyperlink.Id.Value);
+                    // Read directly from raw XML attributes
+                    // The hyperlink element may have r:id pointing to a target stored in XML
+                    var rawXml = hyperlink.OuterXml;
+                    Console.WriteLine($"Raw hyperlink XML: {rawXml}");
 
-                    if (anyRel != null)
-                    {
-                        var target = anyRel.Uri?.ToString();
-                        if (!string.IsNullOrEmpty(target))
-                        {
-                            if (target.StartsWith("file:///"))
-                                url = target;
-                            else if (Path.IsPathRooted(target))
-                                url = "file:///" + target.Replace("\\", "/");
-                            else
-                                url = target;
-                        }
-                    }
+                    // Try reading the target directly from XML namespace attributes
+                    var xElement = XElement.Parse(rawXml);
+
+                    // Check all attributes for any URL or path
+                    foreach (var attr in xElement.Attributes())
+                        Console.WriteLine($"Attr: {attr.Name} = {attr.Value}");
                 }
-            }
-            else if (hyperlink.Anchor != null)
-            {
-                url = $"#{hyperlink.Anchor.Value}";
             }
 
             var runs = hyperlink.Elements<Word.Run>()
@@ -267,7 +257,6 @@ namespace WordHelp
                     runs.Add(new XElement("span", fallbackText));
             }
 
-            // Return null if nothing to render
             if (!runs.Any() && url == "#")
                 return null;
 
