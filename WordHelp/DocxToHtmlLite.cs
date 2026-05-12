@@ -215,5 +215,66 @@ namespace WordHelp
                 return img;
             }
         }
+        private static XElement ConvertHyperlink(Word.Hyperlink hyperlink, WordprocessingDocument doc)
+        {
+            string url = "#";
+
+            if (hyperlink.Id != null)
+            {
+                // Try external hyperlink relationship (http/https)
+                var extRel = doc.MainDocumentPart.HyperlinkRelationships
+                    .FirstOrDefault(r => r.Id == hyperlink.Id.Value);
+
+                if (extRel != null)
+                {
+                    url = extRel.Uri.ToString();
+                }
+                else
+                {
+                    // Try external relationships (file paths)
+                    var anyRel = doc.MainDocumentPart.ExternalRelationships
+                        .FirstOrDefault(r => r.Id == hyperlink.Id.Value);
+
+                    if (anyRel != null)
+                    {
+                        var target = anyRel.Uri?.ToString();
+                        if (!string.IsNullOrEmpty(target))
+                        {
+                            if (target.StartsWith("file:///"))
+                                url = target;
+                            else if (Path.IsPathRooted(target))
+                                url = "file:///" + target.Replace("\\", "/");
+                            else
+                                url = target;
+                        }
+                    }
+                }
+            }
+            else if (hyperlink.Anchor != null)
+            {
+                url = $"#{hyperlink.Anchor.Value}";
+            }
+
+            var runs = hyperlink.Elements<Word.Run>()
+                .Select(r => ConvertRun(r, doc))
+                .Where(r => r != null)
+                .ToList();
+
+            if (!runs.Any())
+            {
+                var fallbackText = hyperlink.InnerText;
+                if (!string.IsNullOrEmpty(fallbackText))
+                    runs.Add(new XElement("span", fallbackText));
+            }
+
+            // Return null if nothing to render
+            if (!runs.Any() && url == "#")
+                return null;
+
+            return new XElement("a",
+                new XAttribute("href", url),
+                runs
+            );
+        }
     }
 }

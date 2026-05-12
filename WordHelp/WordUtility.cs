@@ -1,4 +1,5 @@
 ﻿using DocumentFormat.OpenXml;
+using DocumentFormat.OpenXml.ExtendedProperties;
 using DocumentFormat.OpenXml.Packaging;
 using DocumentFormat.OpenXml.Wordprocessing;
 using OpenXmlPowerTools;
@@ -10,6 +11,7 @@ using System.Xml.Linq;
 using A = DocumentFormat.OpenXml.Drawing;
 using DW = DocumentFormat.OpenXml.Drawing.Wordprocessing;
 using PIC = DocumentFormat.OpenXml.Drawing.Pictures;
+using Word = DocumentFormat.OpenXml.Wordprocessing;
 
 namespace WordHelp
 {
@@ -850,6 +852,7 @@ namespace WordHelp
             mainPart.Document.Save();
 
         }
+        
         //public static void InsertImagesWithCaptions(DocumentFormat.OpenXml.Packaging.WordprocessingDocument wordDoc, List<string> imagePaths)
         //{
         //    DocumentFormat.OpenXml.Packaging.MainDocumentPart mainPart = wordDoc.MainDocumentPart;
