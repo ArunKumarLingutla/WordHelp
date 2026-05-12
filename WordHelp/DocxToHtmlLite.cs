@@ -1,6 +1,7 @@
 ﻿using DocumentFormat.OpenXml;
 using DocumentFormat.OpenXml.Packaging;
 using System;
+using System.Collections.Generic;
 using System.IO;
 using System.Linq;
 using System.Text;
@@ -15,25 +16,18 @@ namespace WordHelp
         {
             using (var doc = WordprocessingDocument.Open(docxPath, false))
             {
-                // Add this at the top of ConvertToHtml, before processing
-                var debugLines = new System.Text.StringBuilder();
+                // Load hyperlink targets once
+                var hyperlinkTargets = LoadHyperlinkTargets(doc);
 
-                foreach (var h in doc.MainDocumentPart.Document.Body.Descendants<Word.Hyperlink>())
-                {
-                    debugLines.AppendLine($"=== Hyperlink: {h.InnerText} ===");
-                    debugLines.AppendLine($"Raw XML: {h.OuterXml}");
-                    debugLines.AppendLine();
-                }
-
-                // Write to a file you can easily open
-                File.WriteAllText(@"C:\temp\hyperlink_debug.txt", debugLines.ToString());
                 var body = doc.MainDocumentPart.Document.Body;
                 var html = new XElement("html",
                     new XElement("head",
                         new XElement("meta", new XAttribute("charset", "utf-8"))
                     ),
                     new XElement("body",
-                        body.Elements().Select(e => ConvertElement(e, doc)).Where(e => e != null)
+                        body.Elements()
+                            .Select(e => ConvertElement(e, doc, hyperlinkTargets))
+                            .Where(e => e != null)
                     )
                 );
 
@@ -41,7 +35,7 @@ namespace WordHelp
             }
         }
 
-        private static object ConvertElement(OpenXmlElement element, WordprocessingDocument doc)
+        private static object ConvertElement(OpenXmlElement element, WordprocessingDocument doc,Dictionary<string, string> hyperlinkTargets)
         {
             // Paragraphs
             if (element is Word.Paragraph para)
@@ -75,7 +69,10 @@ namespace WordHelp
                     para.Elements<Word.Run>().Select(r => ConvertRun(r, doc)).Where(r => r != null)
                 );
             }
-
+            else if (element is Word.Hyperlink hyperlink)
+            {
+                return ConvertHyperlink(hyperlink, doc, hyperlinkTargets);
+            }
             else if (element is Word.Table table)
             {
                 var tblPr = table.GetFirstChild<Word.TableProperties>();
@@ -132,7 +129,7 @@ namespace WordHelp
                                     tc.TableCellProperties.VerticalMerge.Val != null &&
                                     tc.TableCellProperties.VerticalMerge.Val != Word.MergedCellValues.Restart) ?
                                         new XAttribute("rowspan", "???") : null, // need logic to calculate rowspan count
-                                    tc.Elements().Select(e => ConvertElement(e, doc)).Where(e => e != null)
+                                    tc.Elements().Select(e => ConvertElement(e, doc, hyperlinkTargets)).Where(e => e != null)
                                 );
 
                             })
@@ -227,34 +224,24 @@ namespace WordHelp
                 return img;
             }
         }
-        private static XElement ConvertHyperlink(Word.Hyperlink hyperlink, WordprocessingDocument doc)
+        private static XElement ConvertHyperlink(Word.Hyperlink hyperlink,
+    WordprocessingDocument doc, Dictionary<string, string> hyperlinkTargets)
         {
             string url = "#";
 
-            if (hyperlink.Id != null)
+            if (hyperlink.Id != null &&
+                hyperlinkTargets.TryGetValue(hyperlink.Id.Value, out var target))
             {
-                // Try external hyperlink relationship (http/https)
-                var extRel = doc.MainDocumentPart.HyperlinkRelationships
-                    .FirstOrDefault(r => r.Id == hyperlink.Id.Value);
-
-                if (extRel != null)
-                {
-                    url = extRel.Uri.ToString();
-                }
+                if (target.StartsWith("http", StringComparison.OrdinalIgnoreCase))
+                    url = target;
+                else if (Path.IsPathRooted(target))
+                    url = "file:///" + target.Replace("\\", "/");
                 else
-                {
-                    // Read directly from raw XML attributes
-                    // The hyperlink element may have r:id pointing to a target stored in XML
-                    var rawXml = hyperlink.OuterXml;
-                    Console.WriteLine($"Raw hyperlink XML: {rawXml}");
-
-                    // Try reading the target directly from XML namespace attributes
-                    var xElement = XElement.Parse(rawXml);
-
-                    // Check all attributes for any URL or path
-                    foreach (var attr in xElement.Attributes())
-                        Console.WriteLine($"Attr: {attr.Name} = {attr.Value}");
-                }
+                    url = target;
+            }
+            else if (hyperlink.Anchor != null)
+            {
+                url = $"#{hyperlink.Anchor.Value}";
             }
 
             var runs = hyperlink.Elements<Word.Run>()
@@ -276,6 +263,50 @@ namespace WordHelp
                 new XAttribute("href", url),
                 runs
             );
+        }
+        private static Dictionary<string, string> LoadHyperlinkTargets(WordprocessingDocument doc)
+        {
+            var result = new Dictionary<string, string>();
+
+            try
+            {
+                // Read rels directly from the docx zip using System.IO.Packaging
+                var relsUri = new Uri("/word/_rels/document.xml.rels", UriKind.Relative);
+
+                using (var pkg = System.IO.Packaging.Package.Open(
+                    doc.MainDocumentPart.GetStream(),
+                    FileMode.Open, FileAccess.Read))
+                {
+                    var relsPart = pkg.GetPart(relsUri);
+                    using (var stream = relsPart.GetStream())
+                    using (var reader = new StreamReader(stream))
+                    {
+                        var xml = reader.ReadToEnd();
+                        var xdoc = XDocument.Parse(xml);
+                        XNamespace ns = "http://schemas.openxmlformats.org/package/2006/relationships";
+
+                        foreach (var rel in xdoc.Descendants(ns + "Relationship"))
+                        {
+                            var id = rel.Attribute("Id")?.Value;
+                            var target = rel.Attribute("Target")?.Value;
+                            var type = rel.Attribute("Type")?.Value;
+
+                            if (id != null && target != null &&
+                                type != null && type.Contains("hyperlink"))
+                            {
+                                result[id] = Uri.UnescapeDataString(target);
+                                Console.WriteLine($"Found: {id} -> {target}");
+                            }
+                        }
+                    }
+                }
+            }
+            catch (Exception ex)
+            {
+                Console.WriteLine($"Error reading rels: {ex.Message}");
+            }
+
+            return result;
         }
     }
 }
