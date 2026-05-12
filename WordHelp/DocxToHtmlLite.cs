@@ -15,6 +15,18 @@ namespace WordHelp
         {
             using (var doc = WordprocessingDocument.Open(docxPath, false))
             {
+                // Add this at the top of ConvertToHtml, before processing
+                var debugLines = new System.Text.StringBuilder();
+
+                foreach (var h in doc.MainDocumentPart.Document.Body.Descendants<Word.Hyperlink>())
+                {
+                    debugLines.AppendLine($"=== Hyperlink: {h.InnerText} ===");
+                    debugLines.AppendLine($"Raw XML: {h.OuterXml}");
+                    debugLines.AppendLine();
+                }
+
+                // Write to a file you can easily open
+                File.WriteAllText(@"C:\temp\hyperlink_debug.txt", debugLines.ToString());
                 var body = doc.MainDocumentPart.Document.Body;
                 var html = new XElement("html",
                     new XElement("head",
