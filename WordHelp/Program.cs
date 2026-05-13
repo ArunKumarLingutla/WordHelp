@@ -39,7 +39,7 @@ namespace WordHelp
             //WordUtility.MergeDocuments(templateFilePath, filesToMerge, destinationFilePath);
             ////WordUtility.MergeDocuments(filesToMerge, destinationFilePath);
 
-            //DocxConverter.ConvertToHtml(destinationFilePath, System.IO.Path.Combine(desktopPath, "Final Merge.html"));
+            DocxConverter.ConvertToHtml(destinationFilePath, System.IO.Path.Combine(desktopPath, "Final Merge.html"));
 
             //WordUtility.ConvertNcToWord(dummyTextFile,nctoword);
 
@@ -53,15 +53,15 @@ namespace WordHelp
             //    WordUtility.CloseWordProcessDocument(wordObj.wordDoc);
 
 
-            var templateForHyperLinks = Path.Combine(wordFilesFolder, "HyperLinkTemplate.docx");
-            File.Copy(templateFilePath, templateForHyperLinks, true);
-            WordUtility.OpenWordDocument(wordObj, templateForHyperLinks);
-            for (int i = 0; i < 10; i++)
-            {
-                WordUtility.InsertHyperLink(wordObj.wordDoc, "Google", "C:\\Users\\arunk\\source\\repos\\WordHelp\\TestCases");
-            }
-            WordUtility.SaveWordProcessDocument(wordObj.wordDoc);
-            WordUtility.CloseWordProcessDocument(wordObj.wordDoc);
+            //var templateForHyperLinks = Path.Combine(wordFilesFolder, "HyperLinkTemplate.docx");
+            //File.Copy(templateFilePath, templateForHyperLinks, true);
+            //WordUtility.OpenWordDocument(wordObj, templateForHyperLinks);
+            //for (int i = 0; i < 10; i++)
+            //{
+            //    WordUtility.InsertHyperLink(wordObj.wordDoc, "Google", "C:\\Users\\arunk\\source\\repos\\WordHelp\\TestCases");
+            //}
+            //WordUtility.SaveWordProcessDocument(wordObj.wordDoc);
+            //WordUtility.CloseWordProcessDocument(wordObj.wordDoc);
             //foreach (string imageFile in ImageFiles)
             //{
             //    WordUtility.InsertAPicture(wordObj.wordDoc, imageFile);

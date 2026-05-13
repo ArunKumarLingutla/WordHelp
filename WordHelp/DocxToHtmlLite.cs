@@ -14,11 +14,10 @@ namespace WordHelp
     {
         public static void ConvertToHtml(string docxPath, string outputHtmlPath)
         {
+            var hyperlinkTargets = LoadHyperlinkTargets(docxPath);
+
             using (var doc = WordprocessingDocument.Open(docxPath, false))
             {
-                // Load hyperlink targets once
-                var hyperlinkTargets = LoadHyperlinkTargets(doc);
-
                 var body = doc.MainDocumentPart.Document.Body;
                 var html = new XElement("html",
                     new XElement("head",
@@ -35,9 +34,8 @@ namespace WordHelp
             }
         }
 
-        private static object ConvertElement(OpenXmlElement element, WordprocessingDocument doc,Dictionary<string, string> hyperlinkTargets)
+        private static object ConvertElement(OpenXmlElement element, WordprocessingDocument doc, Dictionary<string, string> hyperlinkTargets)
         {
-            // Paragraphs
             if (element is Word.Paragraph para)
             {
                 double marginTop = 0, marginBottom = 0, lineHeight = 0;
@@ -66,7 +64,12 @@ namespace WordHelp
 
                 return new XElement("p",
                     new XAttribute("style", style),
-                    para.Elements<Word.Run>().Select(r => ConvertRun(r, doc)).Where(r => r != null)
+                    para.Elements().Select((OpenXmlElement e) =>
+                    {
+                        if (e is Word.Run r) return (object)ConvertRun(r, doc);
+                        if (e is Word.Hyperlink h) return (object)ConvertHyperlink(h, doc, hyperlinkTargets);
+                        return null;
+                    }).Where(e => e != null)
                 );
             }
             else if (element is Word.Hyperlink hyperlink)
@@ -121,44 +124,37 @@ namespace WordHelp
 
                                 return new XElement("td",
                                     new XAttribute("style", style),
-                                    // colspan for merged columns
                                     (tc.TableCellProperties?.GridSpan != null) ?
                                         new XAttribute("colspan", tc.TableCellProperties.GridSpan.Val) : null,
-                                    // rowspan for merged rows
                                     (tc.TableCellProperties?.VerticalMerge != null &&
-                                    tc.TableCellProperties.VerticalMerge.Val != null &&
-                                    tc.TableCellProperties.VerticalMerge.Val != Word.MergedCellValues.Restart) ?
-                                        new XAttribute("rowspan", "???") : null, // need logic to calculate rowspan count
+                                     tc.TableCellProperties.VerticalMerge.Val != null &&
+                                     tc.TableCellProperties.VerticalMerge.Val != Word.MergedCellValues.Restart) ?
+                                        new XAttribute("rowspan", "???") : null,
                                     tc.Elements().Select(e => ConvertElement(e, doc, hyperlinkTargets)).Where(e => e != null)
                                 );
-
                             })
                         )
                     )
                 );
             }
 
-            return null; // unsupported element
+            return null;
         }
+
         private static double ConvertTwipToPx(int twips)
         {
-            return Math.Round(twips * 96.0 / 1440.0, 2); // twip → px
+            return Math.Round(twips * 96.0 / 1440.0, 2);
         }
-
-
 
         private static object ConvertRun(Word.Run run, WordprocessingDocument doc)
         {
-            // Handle text inside the run
             var text = run.Elements<Word.Text>().FirstOrDefault()?.Text;
             XElement result = null;
 
             if (!string.IsNullOrEmpty(text))
             {
-                // Start with plain text node
                 object formatted = new XText(text);
 
-                // Apply formatting if available
                 if (run.RunProperties != null)
                 {
                     if (run.RunProperties.Bold != null)
@@ -172,11 +168,9 @@ namespace WordHelp
                         formatted = new XElement("u", formatted);
                 }
 
-                // Ensure it’s XElement for consistent return type
                 result = formatted as XElement ?? new XElement("span", formatted);
             }
 
-            // Handle image inside the run
             var drawing = run.Elements<Word.Drawing>().FirstOrDefault();
             if (drawing != null)
                 return ConvertImage(drawing, doc);
@@ -194,12 +188,11 @@ namespace WordHelp
 
             var part = (ImagePart)doc.MainDocumentPart.GetPartById(embed);
 
-            // Get image dimensions from Extent (in EMUs)
             var extent = drawing.Descendants<DocumentFormat.OpenXml.Drawing.Wordprocessing.Extent>().FirstOrDefault();
             double widthPx = 0, heightPx = 0;
             if (extent != null)
             {
-                widthPx = Math.Round(extent.Cx / 914400.0 * 96);  // EMUs to px
+                widthPx = Math.Round(extent.Cx / 914400.0 * 96);
                 heightPx = Math.Round(extent.Cy / 914400.0 * 96);
             }
 
@@ -224,15 +217,18 @@ namespace WordHelp
                 return img;
             }
         }
+
         private static XElement ConvertHyperlink(Word.Hyperlink hyperlink,
-    WordprocessingDocument doc, Dictionary<string, string> hyperlinkTargets)
+            WordprocessingDocument doc, Dictionary<string, string> hyperlinkTargets)
         {
             string url = "#";
 
             if (hyperlink.Id != null &&
                 hyperlinkTargets.TryGetValue(hyperlink.Id.Value, out var target))
             {
-                if (target.StartsWith("http", StringComparison.OrdinalIgnoreCase))
+                if (target.StartsWith("file:///", StringComparison.OrdinalIgnoreCase))
+                    url = target.Replace("\\", "/");
+                else if (target.StartsWith("http", StringComparison.OrdinalIgnoreCase))
                     url = target;
                 else if (Path.IsPathRooted(target))
                     url = "file:///" + target.Replace("\\", "/");
@@ -264,21 +260,20 @@ namespace WordHelp
                 runs
             );
         }
-        private static Dictionary<string, string> LoadHyperlinkTargets(WordprocessingDocument doc)
+
+        private static Dictionary<string, string> LoadHyperlinkTargets(string docxPath)
         {
             var result = new Dictionary<string, string>();
 
             try
             {
-                // Read rels directly from the docx zip using System.IO.Packaging
-                var relsUri = new Uri("/word/_rels/document.xml.rels", UriKind.Relative);
-
-                using (var pkg = System.IO.Packaging.Package.Open(
-                    doc.MainDocumentPart.GetStream(),
-                    FileMode.Open, FileAccess.Read))
+                using (var zip = System.IO.Compression.ZipFile.OpenRead(docxPath))
                 {
-                    var relsPart = pkg.GetPart(relsUri);
-                    using (var stream = relsPart.GetStream())
+                    var relsEntry = zip.GetEntry("word/_rels/document.xml.rels");
+                    if (relsEntry == null)
+                        return result;
+
+                    using (var stream = relsEntry.Open())
                     using (var reader = new StreamReader(stream))
                     {
                         var xml = reader.ReadToEnd();
@@ -289,21 +284,17 @@ namespace WordHelp
                         {
                             var id = rel.Attribute("Id")?.Value;
                             var target = rel.Attribute("Target")?.Value;
-                            var type = rel.Attribute("Type")?.Value;
 
-                            if (id != null && target != null &&
-                                type != null && type.Contains("hyperlink"))
-                            {
+                            if (id != null && target != null)
                                 result[id] = Uri.UnescapeDataString(target);
-                                Console.WriteLine($"Found: {id} -> {target}");
-                            }
                         }
                     }
                 }
             }
             catch (Exception ex)
             {
-                Console.WriteLine($"Error reading rels: {ex.Message}");
+                // Log or rethrow as needed
+                throw new InvalidOperationException($"Failed to load hyperlink targets from: {docxPath}", ex);
             }
 
             return result;
