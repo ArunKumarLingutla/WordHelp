@@ -117,7 +117,7 @@ namespace WordHelp
                             // Copy styles and images
                             CopyStyles(srcPart, mainPart);
                             var imageMapping = CopyImageWithMapping(srcPart, mainPart);
-
+                            var hyperlinkMapping = CopyHyperlinkRelationships(srcPart, mainPart);
                             // Copy headers and footers
                             CopyHeaderFooter(srcDoc, destinationDoc);
 
@@ -144,6 +144,8 @@ namespace WordHelp
 
                                 // Remap image IDs
                                 ReMapImageReferences(clonedElement, imageMapping);
+
+                                RemapHyperlinkReferences(clonedElement, hyperlinkMapping);
 
                                 // Fix image sizes
                                 FixImageSizes(clonedElement, maxWidthEMU);
@@ -852,7 +854,41 @@ namespace WordHelp
             mainPart.Document.Save();
 
         }
-        
+        /// <summary>
+        /// Copies hyperlink relationships from source to destination and returns
+        /// a mapping of old relationship IDs to new ones.
+        /// </summary>
+        public static Dictionary<string, string> CopyHyperlinkRelationships(
+            MainDocumentPart sourcePart,
+            MainDocumentPart destinationPart)
+        {
+            var hyperlinkMapping = new Dictionary<string, string>();
+
+            foreach (var rel in sourcePart.HyperlinkRelationships)
+            {
+                var newRel = destinationPart.AddHyperlinkRelationship(rel.Uri, rel.IsExternal);
+                hyperlinkMapping[rel.Id] = newRel.Id;
+            }
+
+            return hyperlinkMapping;
+        }
+
+        /// <summary>
+        /// Remaps hyperlink relationship IDs in cloned elements to their new IDs.
+        /// </summary>
+        public static void RemapHyperlinkReferences(
+            OpenXmlElement element,
+            Dictionary<string, string> hyperlinkMapping)
+        {
+            foreach (var hyperlink in element.Descendants<Hyperlink>())
+            {
+                if (hyperlink.Id != null && hyperlinkMapping.ContainsKey(hyperlink.Id))
+                {
+                    hyperlink.Id = hyperlinkMapping[hyperlink.Id];
+                }
+            }
+        }
+
         //public static void InsertImagesWithCaptions(DocumentFormat.OpenXml.Packaging.WordprocessingDocument wordDoc, List<string> imagePaths)
         //{
         //    DocumentFormat.OpenXml.Packaging.MainDocumentPart mainPart = wordDoc.MainDocumentPart;

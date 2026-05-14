@@ -32,12 +32,12 @@ namespace WordHelp
 
             //WordUtility.OpenWordDocument(wordObj, multipleImagesFile);
             //WordUtility.ReplaceText(wordObj.wordDoc, "Hi", "Hello");
-            //WordUtility.ReplaceImage(wordObj.wordDoc,System.IO.Path.Combine(desktopPath, "Test.png"));
+            //WordUtility.ReplaceImage(wordObj.wordDoc, System.IO.Path.Combine(desktopPath, "Test.png"));
             //WordUtility.InsertAPicture(wordObj.wordDoc, System.IO.Path.Combine(desktopPath, "Test.png"));
             //WordUtility.SaveWordProcessDocument(wordObj.wordDoc);
             //WordUtility.CloseWordProcessDocument(wordObj.wordDoc);
-            //WordUtility.MergeDocuments(templateFilePath, filesToMerge, destinationFilePath);
-            ////WordUtility.MergeDocuments(filesToMerge, destinationFilePath);
+            WordUtility.MergeDocuments(templateFilePath, filesToMerge, destinationFilePath);
+            //WordUtility.MergeDocuments(filesToMerge, destinationFilePath);
 
             DocxConverter.ConvertToHtml(destinationFilePath, System.IO.Path.Combine(desktopPath, "Final Merge.html"));
 
